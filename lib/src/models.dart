@@ -99,6 +99,10 @@ class JellyfinItem {
     required this.runTimeTicks,
     required this.imageTag,
     required this.backdropTag,
+    required this.parentIndexNumber,
+    required this.indexNumber,
+    required this.seriesName,
+    required this.seasonName,
     required this.mediaStreams,
     required this.people,
   });
@@ -111,6 +115,10 @@ class JellyfinItem {
   final int? runTimeTicks;
   final String? imageTag;
   final String? backdropTag;
+  final int? parentIndexNumber;
+  final int? indexNumber;
+  final String? seriesName;
+  final String? seasonName;
   final List<JellyfinMediaStream> mediaStreams;
   final List<JellyfinPerson> people;
 
@@ -121,9 +129,30 @@ class JellyfinItem {
     final parts = [
       if (productionYear != null) productionYear.toString(),
       if (durationLabel.isNotEmpty) durationLabel,
+      if (episodeCode.isNotEmpty) episodeCode,
       type,
     ];
     return parts.join('  ');
+  }
+
+  String get displayTitle {
+    if (type == 'Episode' && seriesName != null && episodeCode.isNotEmpty) {
+      return '$seriesName  $episodeCode  $name';
+    }
+    return name;
+  }
+
+  String get episodeCode {
+    if (parentIndexNumber == null && indexNumber == null) {
+      return '';
+    }
+    final season = parentIndexNumber == null
+        ? ''
+        : 'S${parentIndexNumber.toString().padLeft(2, '0')}';
+    final episode = indexNumber == null
+        ? ''
+        : 'E${indexNumber.toString().padLeft(2, '0')}';
+    return '$season$episode';
   }
 
   String get durationLabel {
@@ -164,6 +193,10 @@ class JellyfinItem {
       runTimeTicks: json['RunTimeTicks'] as int?,
       imageTag: tags['Primary'] as String?,
       backdropTag: backdropTags.isEmpty ? null : backdropTags.first as String?,
+      parentIndexNumber: json['ParentIndexNumber'] as int?,
+      indexNumber: json['IndexNumber'] as int?,
+      seriesName: json['SeriesName'] as String?,
+      seasonName: json['SeasonName'] as String?,
       mediaStreams: streams
           .map(
             (stream) =>

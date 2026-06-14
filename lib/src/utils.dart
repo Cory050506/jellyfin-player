@@ -123,6 +123,38 @@ String subtitleTrackLabel(SubtitleTrack track) {
   return details.isEmpty ? title : '$title  ${details.join(' / ')}';
 }
 
+List<T> uniqueTracks<T>(List<T> tracks) {
+  final seen = <String>{};
+  final result = <T>[];
+  for (final track in tracks) {
+    final id = switch (track) {
+      AudioTrack audio => 'audio:${audio.id}',
+      SubtitleTrack subtitle => 'subtitle:${subtitle.id}',
+      _ => track.toString(),
+    };
+    if (seen.add(id)) {
+      result.add(track);
+    }
+  }
+  return result;
+}
+
+String formatDuration(Duration duration) {
+  if (duration <= Duration.zero) {
+    return '0:00';
+  }
+  final hours = duration.inHours;
+  final minutes = duration.inMinutes
+      .remainder(60)
+      .toString()
+      .padLeft(hours > 0 ? 2 : 1, '0');
+  final seconds = duration.inSeconds.remainder(60).toString().padLeft(2, '0');
+  if (hours > 0) {
+    return '$hours:$minutes:$seconds';
+  }
+  return '$minutes:$seconds';
+}
+
 class JellyfinException implements Exception {
   const JellyfinException(this.message);
 

@@ -11,7 +11,9 @@ class JellyfinClient {
   final JellyfinSession? session;
   final String baseUrl;
 
-  static const itemFields =
+  static const listFields =
+      'Overview,PrimaryImageAspectRatio,Genres,RunTimeTicks,ProductionYear,BackdropImageTags,ParentIndexNumber,IndexNumber,SeriesName,SeasonName';
+  static const detailFields =
       'Overview,PrimaryImageAspectRatio,MediaSources,Genres,RunTimeTicks,ProductionYear,BackdropImageTags,People';
 
   Map<String, String> get _headers {
@@ -73,7 +75,7 @@ class JellyfinClient {
         if (movieLibrary) ...{'Recursive': 'true', 'IncludeItemTypes': 'Movie'},
         'SortBy': 'SortName',
         'SortOrder': 'Ascending',
-        'Fields': itemFields,
+        'Fields': listFields,
         'Limit': '200',
       }),
       headers: _headers,
@@ -91,7 +93,7 @@ class JellyfinClient {
         'ParentId': parentId,
         'SortBy': 'SortName',
         'SortOrder': 'Ascending',
-        'Fields': itemFields,
+        'Fields': listFields,
         'Limit': '300',
       }),
       headers: _headers,
@@ -105,7 +107,7 @@ class JellyfinClient {
   Future<JellyfinItem> getItemDetails(String itemId) async {
     final userId = session!.userId;
     final response = await http.get(
-      _uri('/Users/$userId/Items/$itemId', {'Fields': itemFields}),
+      _uri('/Users/$userId/Items/$itemId', {'Fields': detailFields}),
       headers: _headers,
     );
     return JellyfinItem.fromJson(decodeResponse(response));
@@ -115,7 +117,7 @@ class JellyfinClient {
     final response = await http.get(
       _uri('/Items/$itemId/Similar', {
         'UserId': session!.userId,
-        'Fields': itemFields,
+        'Fields': listFields,
         'Limit': '12',
       }),
       headers: _headers,

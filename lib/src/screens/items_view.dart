@@ -51,11 +51,17 @@ class ItemsView extends StatelessWidget {
                   backdropUrl: client.backdropUrl(featured, width: 1400),
                   posterUrl: client.imageUrl(featured, width: 360),
                   onPlay: featured.isPlayable
-                      ? () {
+                      ? () async {
+                          final playable = featured.mediaStreams.isEmpty
+                              ? await client.getItemDetails(featured.id)
+                              : featured;
+                          if (!context.mounted) {
+                            return;
+                          }
                           Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) =>
-                                  PlayerScreen(client: client, item: featured),
+                                  PlayerScreen(client: client, item: playable),
                             ),
                           );
                         }
