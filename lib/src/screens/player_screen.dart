@@ -137,12 +137,83 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (player == null) {
       return;
     }
-    if (settings.subtitleMode == DefaultSubtitleMode.off) {
+    final tracks = await _waitForTracks(player);
+
+    final audioIndex = widget.audioStreamIndex;
+    if (audioIndex != null) {
+      final position = _streamPosition(widget.item.audioStreams, audioIndex);
+      final match = _audioTrackAtPosition(tracks.audio, position);
+      await player.setAudioTrack(match ?? AudioTrack.auto());
+    } else {
+      await player.setAudioTrack(AudioTrack.auto());
+    }
+
+    final subtitleIndex = widget.subtitleStreamIndex;
+    if (subtitleIndex != null) {
+      final position = _streamPosition(
+        widget.item.subtitleStreams,
+        subtitleIndex,
+      );
+      final match = _subtitleTrackAtPosition(tracks.subtitle, position);
+      await player.setSubtitleTrack(match ?? SubtitleTrack.no());
+    } else if (settings.subtitleMode == DefaultSubtitleMode.off) {
       await player.setSubtitleTrack(SubtitleTrack.no());
     } else {
       await player.setSubtitleTrack(SubtitleTrack.auto());
     }
-    await player.setAudioTrack(AudioTrack.auto());
+  }
+
+  /// Waits briefly for mpv to report the tracks it discovered in the opened
+  /// media, falling back to whatever is currently known if it takes too long.
+  Future<Tracks> _waitForTracks(Player player) async {
+    if (player.state.tracks.audio.length > 2 ||
+        player.state.tracks.subtitle.length > 2) {
+      return player.state.tracks;
+    }
+    try {
+      return await player.stream.tracks
+          .firstWhere(
+            (tracks) => tracks.audio.length > 2 || tracks.subtitle.length > 2,
+          )
+          .timeout(const Duration(seconds: 3));
+    } catch (_) {
+      return player.state.tracks;
+    }
+  }
+
+  /// Finds the position of a selected Jellyfin stream index among streams of
+  /// the same type, e.g. the 2nd audio stream overall.
+  int _streamPosition(List<JellyfinMediaStream> streams, int selectedIndex) {
+    return streams.indexWhere((stream) => stream.index == selectedIndex);
+  }
+
+  /// Returns the mpv-reported audio track at [position] among real tracks
+  /// (i.e. excluding the synthetic "auto"/"no" entries), since mpv assigns
+  /// track ids per-type rather than using the absolute Jellyfin stream index.
+  AudioTrack? _audioTrackAtPosition(List<AudioTrack> mpvTracks, int position) {
+    if (position < 0) {
+      return null;
+    }
+    final realTracks = mpvTracks
+        .where((track) => track.id != 'auto' && track.id != 'no')
+        .toList();
+    return position < realTracks.length ? realTracks[position] : null;
+  }
+
+  /// Returns the mpv-reported subtitle track at [position] among real tracks
+  /// (i.e. excluding the synthetic "auto"/"no" entries), since mpv assigns
+  /// track ids per-type rather than using the absolute Jellyfin stream index.
+  SubtitleTrack? _subtitleTrackAtPosition(
+    List<SubtitleTrack> mpvTracks,
+    int position,
+  ) {
+    if (position < 0) {
+      return null;
+    }
+    final realTracks = mpvTracks
+        .where((track) => track.id != 'auto' && track.id != 'no')
+        .toList();
+    return position < realTracks.length ? realTracks[position] : null;
   }
 
   @override
@@ -445,9 +516,7 @@ class PlayerTopChrome extends StatelessWidget {
                 if (onFullscreen != null) ...[
                   const SizedBox(width: 8),
                   IconButton.filledTonal(
-                    tooltip: isFullscreen
-                        ? 'Exit full screen'
-                        : 'Full screen',
+                    tooltip: isFullscreen ? 'Exit full screen' : 'Full screen',
                     onPressed: () => unawaited(onFullscreen!()),
                     icon: Icon(
                       isFullscreen
