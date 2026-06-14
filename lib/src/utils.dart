@@ -1,5 +1,11 @@
 part of '../main.dart';
 
+bool get isDesktopPlatform =>
+    !kIsWeb &&
+    (defaultTargetPlatform == TargetPlatform.windows ||
+        defaultTargetPlatform == TargetPlatform.linux ||
+        defaultTargetPlatform == TargetPlatform.macOS);
+
 Map<String, dynamic> decodeResponse(http.Response response) {
   final body = response.body.isEmpty
       ? <String, dynamic>{}

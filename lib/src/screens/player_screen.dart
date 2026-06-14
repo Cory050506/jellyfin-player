@@ -25,11 +25,30 @@ class _PlayerScreenState extends State<PlayerScreen> {
   String? _error;
   Timer? _progressTimer;
   bool _reportedStopped = false;
+  bool _isFullscreen = false;
 
   @override
   void initState() {
     super.initState();
     unawaited(_initialize());
+    if (isDesktopPlatform) {
+      unawaited(_syncFullscreenState());
+    }
+  }
+
+  Future<void> _syncFullscreenState() async {
+    final fullscreen = await windowManager.isFullScreen();
+    if (mounted) {
+      setState(() => _isFullscreen = fullscreen);
+    }
+  }
+
+  Future<void> _toggleFullscreen() async {
+    final next = !_isFullscreen;
+    await windowManager.setFullScreen(next);
+    if (mounted) {
+      setState(() => _isFullscreen = next);
+    }
   }
 
   Future<void> _initialize() async {
@@ -131,6 +150,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _progressTimer?.cancel();
     unawaited(_reportStopped());
     unawaited(_player?.dispose());
+    if (_isFullscreen) {
+      unawaited(windowManager.setFullScreen(false));
+    }
     super.dispose();
   }
 
@@ -202,6 +224,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
             onSubtitles: player == null
                 ? null
                 : () => _showSubtitleTracks(player),
+            isFullscreen: _isFullscreen,
+            onFullscreen: isDesktopPlatform ? _toggleFullscreen : null,
           ),
           if (player != null)
             PlayerBottomChrome(player: player, item: widget.item),
@@ -346,12 +370,16 @@ class PlayerTopChrome extends StatelessWidget {
     required this.onBack,
     required this.onAudio,
     required this.onSubtitles,
+    required this.isFullscreen,
+    required this.onFullscreen,
   });
 
   final JellyfinItem item;
   final Future<void> Function() onBack;
   final VoidCallback? onAudio;
   final VoidCallback? onSubtitles;
+  final bool isFullscreen;
+  final Future<void> Function()? onFullscreen;
 
   @override
   Widget build(BuildContext context) {
@@ -414,6 +442,20 @@ class PlayerTopChrome extends StatelessWidget {
                   onPressed: onSubtitles,
                   icon: const Icon(Icons.subtitles_rounded),
                 ),
+                if (onFullscreen != null) ...[
+                  const SizedBox(width: 8),
+                  IconButton.filledTonal(
+                    tooltip: isFullscreen
+                        ? 'Exit full screen'
+                        : 'Full screen',
+                    onPressed: () => unawaited(onFullscreen!()),
+                    icon: Icon(
+                      isFullscreen
+                          ? Icons.fullscreen_exit_rounded
+                          : Icons.fullscreen_rounded,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
