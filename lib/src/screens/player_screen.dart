@@ -335,22 +335,27 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 duration: const Duration(milliseconds: 200),
                 child: IgnorePointer(
                   ignoring: !_controlsVisible,
-                  child: PlayerTopChrome(
-                    item: widget.item,
-                    onBack: () async {
-                      await _reportStopped();
-                      if (context.mounted) {
-                        Navigator.of(context).pop();
-                      }
-                    },
-                    onAudio: player == null
-                        ? null
-                        : () => _showAudioTracks(player),
-                    onSubtitles: player == null
-                        ? null
-                        : () => _showSubtitleTracks(player),
-                    isFullscreen: _isFullscreen,
-                    onFullscreen: isDesktopPlatform ? _toggleFullscreen : null,
+                  child: Listener(
+                    onPointerDown: (_) => _showControls(),
+                    child: PlayerTopChrome(
+                      item: widget.item,
+                      onBack: () async {
+                        await _reportStopped();
+                        if (context.mounted) {
+                          Navigator.of(context).pop();
+                        }
+                      },
+                      onAudio: player == null
+                          ? null
+                          : () => _showAudioTracks(player),
+                      onSubtitles: player == null
+                          ? null
+                          : () => _showSubtitleTracks(player),
+                      isFullscreen: _isFullscreen,
+                      onFullscreen: isDesktopPlatform
+                          ? _toggleFullscreen
+                          : null,
+                    ),
                   ),
                 ),
               ),
@@ -360,9 +365,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   duration: const Duration(milliseconds: 200),
                   child: IgnorePointer(
                     ignoring: !_controlsVisible,
-                    child: PlayerBottomChrome(
-                      player: player,
-                      item: widget.item,
+                    child: Listener(
+                      onPointerDown: (_) => _showControls(),
+                      child: PlayerBottomChrome(
+                        player: player,
+                        item: widget.item,
+                      ),
                     ),
                   ),
                 ),
@@ -651,6 +659,22 @@ class PlayerBottomChrome extends StatelessWidget {
                       children: [
                         Row(
                           children: [
+                            IconButton.filledTonal(
+                              tooltip: 'Back 10 seconds',
+                              onPressed: () {
+                                final target =
+                                    position - const Duration(seconds: 10);
+                                unawaited(
+                                  player.seek(
+                                    target < Duration.zero
+                                        ? Duration.zero
+                                        : target,
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.replay_10_rounded),
+                            ),
+                            const SizedBox(width: 8),
                             StreamBuilder<bool>(
                               stream: player.stream.playing,
                               initialData: player.state.playing,
@@ -667,6 +691,20 @@ class PlayerBottomChrome extends StatelessWidget {
                                   ),
                                 );
                               },
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton.filledTonal(
+                              tooltip: 'Forward 30 seconds',
+                              onPressed: () {
+                                final target =
+                                    position + const Duration(seconds: 30);
+                                unawaited(
+                                  player.seek(
+                                    target > duration ? duration : target,
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.forward_30_rounded),
                             ),
                             const SizedBox(width: 12),
                             Text(
