@@ -234,6 +234,7 @@ class TrackDropdown extends StatelessWidget {
               initialValue: streams.any((stream) => stream.index == value)
                   ? value
                   : null,
+              isExpanded: true,
               decoration: InputDecoration(labelText: title),
               items: [
                 DropdownMenuItem<int?>(value: null, child: Text(emptyLabel)),
