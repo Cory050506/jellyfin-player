@@ -99,6 +99,8 @@ class JellyfinItem {
     required this.runTimeTicks,
     required this.imageTag,
     required this.backdropTag,
+    required this.mediaStreams,
+    required this.people,
   });
 
   final String id;
@@ -109,6 +111,8 @@ class JellyfinItem {
   final int? runTimeTicks;
   final String? imageTag;
   final String? backdropTag;
+  final List<JellyfinMediaStream> mediaStreams;
+  final List<JellyfinPerson> people;
 
   bool get isPlayable =>
       type == 'Movie' || type == 'Episode' || type == 'Video';
@@ -136,9 +140,21 @@ class JellyfinItem {
     return '${minutes}m';
   }
 
+  List<JellyfinMediaStream> get audioStreams =>
+      mediaStreams.where((stream) => stream.type == 'Audio').toList();
+
+  List<JellyfinMediaStream> get subtitleStreams =>
+      mediaStreams.where((stream) => stream.type == 'Subtitle').toList();
+
   static JellyfinItem fromJson(Map<String, dynamic> json) {
     final tags = json['ImageTags'] as Map<String, dynamic>? ?? {};
     final backdropTags = json['BackdropImageTags'] as List<dynamic>? ?? [];
+    final mediaSources = json['MediaSources'] as List<dynamic>? ?? [];
+    final streams = mediaSources.isEmpty
+        ? <dynamic>[]
+        : (mediaSources.first as Map<String, dynamic>)['MediaStreams']
+                  as List<dynamic>? ??
+              [];
     return JellyfinItem(
       id: json['Id'] as String,
       name: json['Name'] as String? ?? 'Untitled',
@@ -148,6 +164,87 @@ class JellyfinItem {
       runTimeTicks: json['RunTimeTicks'] as int?,
       imageTag: tags['Primary'] as String?,
       backdropTag: backdropTags.isEmpty ? null : backdropTags.first as String?,
+      mediaStreams: streams
+          .map(
+            (stream) =>
+                JellyfinMediaStream.fromJson(stream as Map<String, dynamic>),
+          )
+          .toList(),
+      people: (json['People'] as List<dynamic>? ?? [])
+          .map(
+            (person) => JellyfinPerson.fromJson(person as Map<String, dynamic>),
+          )
+          .toList(),
+    );
+  }
+}
+
+class JellyfinMediaStream {
+  const JellyfinMediaStream({
+    required this.index,
+    required this.type,
+    required this.displayTitle,
+    required this.language,
+    required this.codec,
+    required this.isDefault,
+    required this.isForced,
+  });
+
+  final int index;
+  final String type;
+  final String displayTitle;
+  final String? language;
+  final String? codec;
+  final bool isDefault;
+  final bool isForced;
+
+  String get label {
+    final parts = [
+      if (displayTitle.isNotEmpty) displayTitle,
+      if (language != null && language!.isNotEmpty) language!,
+      if (codec != null && codec!.isNotEmpty) codec!,
+      if (isDefault) 'Default',
+      if (isForced) 'Forced',
+    ];
+    return parts.isEmpty ? '$type track $index' : parts.join('  ');
+  }
+
+  static JellyfinMediaStream fromJson(Map<String, dynamic> json) {
+    return JellyfinMediaStream(
+      index: json['Index'] as int? ?? -1,
+      type: json['Type'] as String? ?? '',
+      displayTitle: json['DisplayTitle'] as String? ?? '',
+      language: json['Language'] as String?,
+      codec: json['Codec'] as String?,
+      isDefault: json['IsDefault'] as bool? ?? false,
+      isForced: json['IsForced'] as bool? ?? false,
+    );
+  }
+}
+
+class JellyfinPerson {
+  const JellyfinPerson({
+    required this.id,
+    required this.name,
+    required this.role,
+    required this.type,
+    required this.imageTag,
+  });
+
+  final String id;
+  final String name;
+  final String role;
+  final String type;
+  final String? imageTag;
+
+  static JellyfinPerson fromJson(Map<String, dynamic> json) {
+    final tags = json['ImageTags'] as Map<String, dynamic>? ?? {};
+    return JellyfinPerson(
+      id: json['Id'] as String? ?? '',
+      name: json['Name'] as String? ?? 'Unknown',
+      role: json['Role'] as String? ?? '',
+      type: json['Type'] as String? ?? '',
+      imageTag: tags['Primary'] as String?,
     );
   }
 }

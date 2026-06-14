@@ -1,10 +1,18 @@
 part of '../../main.dart';
 
 class PlayerScreen extends StatefulWidget {
-  const PlayerScreen({super.key, required this.client, required this.item});
+  const PlayerScreen({
+    super.key,
+    required this.client,
+    required this.item,
+    this.audioStreamIndex,
+    this.subtitleStreamIndex,
+  });
 
   final JellyfinClient client;
   final JellyfinItem item;
+  final int? audioStreamIndex;
+  final int? subtitleStreamIndex;
 
   @override
   State<PlayerScreen> createState() => _PlayerScreenState();
@@ -43,7 +51,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
         _controller = controller;
       });
       await _applyMpvSettings(settings);
-      final url = widget.client.streamUrl(widget.item, settings);
+      final url = widget.client.streamUrl(
+        widget.item,
+        settings,
+        audioStreamIndex: widget.audioStreamIndex,
+        subtitleStreamIndex: widget.subtitleStreamIndex,
+      );
       await player.open(Media(url.toString()), play: true);
       await _applyDefaultTrackSettings(settings);
     } catch (error) {

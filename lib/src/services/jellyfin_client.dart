@@ -11,6 +11,9 @@ class JellyfinClient {
   final JellyfinSession? session;
   final String baseUrl;
 
+  static const itemFields =
+      'Overview,PrimaryImageAspectRatio,MediaSources,Genres,RunTimeTicks,ProductionYear,BackdropImageTags,People';
+
   Map<String, String> get _headers {
     final deviceId = session?.deviceId ?? 'setup-device';
     final tokenPart = session == null
@@ -70,8 +73,7 @@ class JellyfinClient {
         if (movieLibrary) ...{'Recursive': 'true', 'IncludeItemTypes': 'Movie'},
         'SortBy': 'SortName',
         'SortOrder': 'Ascending',
-        'Fields':
-            'Overview,PrimaryImageAspectRatio,MediaSources,Genres,RunTimeTicks,ProductionYear,BackdropImageTags',
+        'Fields': itemFields,
         'Limit': '200',
       }),
       headers: _headers,
@@ -89,9 +91,32 @@ class JellyfinClient {
         'ParentId': parentId,
         'SortBy': 'SortName',
         'SortOrder': 'Ascending',
-        'Fields':
-            'Overview,PrimaryImageAspectRatio,MediaSources,Genres,RunTimeTicks,ProductionYear,BackdropImageTags',
+        'Fields': itemFields,
         'Limit': '300',
+      }),
+      headers: _headers,
+    );
+    final body = decodeResponse(response);
+    return (body['Items'] as List<dynamic>? ?? [])
+        .map((item) => JellyfinItem.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<JellyfinItem> getItemDetails(String itemId) async {
+    final userId = session!.userId;
+    final response = await http.get(
+      _uri('/Users/$userId/Items/$itemId', {'Fields': itemFields}),
+      headers: _headers,
+    );
+    return JellyfinItem.fromJson(decodeResponse(response));
+  }
+
+  Future<List<JellyfinItem>> getSimilarItems(String itemId) async {
+    final response = await http.get(
+      _uri('/Items/$itemId/Similar', {
+        'UserId': session!.userId,
+        'Fields': itemFields,
+        'Limit': '12',
       }),
       headers: _headers,
     );
@@ -121,11 +146,29 @@ class JellyfinClient {
     return _uri('/Items/${item.id}/Images/Backdrop/0', query);
   }
 
-  Uri streamUrl(JellyfinItem item, AppSettings settings) {
+  Uri personImageUrl(JellyfinPerson person, {int width = 260}) {
+    final query = <String, String>{
+      'fillWidth': '$width',
+      'quality': '88',
+      if (person.imageTag != null) 'tag': person.imageTag!,
+      if (session != null) 'api_key': session!.accessToken,
+    };
+    return _uri('/Items/${person.id}/Images/Primary', query);
+  }
+
+  Uri streamUrl(
+    JellyfinItem item,
+    AppSettings settings, {
+    int? audioStreamIndex,
+    int? subtitleStreamIndex,
+  }) {
     return _uri('/Videos/${item.id}/stream', {
       if (settings.directStream) 'static': 'true',
       'api_key': session!.accessToken,
       'mediaSourceId': item.id,
+      if (audioStreamIndex != null) 'AudioStreamIndex': '$audioStreamIndex',
+      if (subtitleStreamIndex != null)
+        'SubtitleStreamIndex': '$subtitleStreamIndex',
     });
   }
 
