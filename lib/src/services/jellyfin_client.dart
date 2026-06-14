@@ -12,9 +12,9 @@ class JellyfinClient {
   final String baseUrl;
 
   static const listFields =
-      'Overview,PrimaryImageAspectRatio,Genres,RunTimeTicks,ProductionYear,BackdropImageTags,ParentIndexNumber,IndexNumber,SeriesName,SeasonName';
+      'Overview,PrimaryImageAspectRatio,Genres,RunTimeTicks,ProductionYear,BackdropImageTags,ParentIndexNumber,IndexNumber,SeriesName,SeasonName,UserData';
   static const detailFields =
-      'Overview,PrimaryImageAspectRatio,MediaSources,Genres,RunTimeTicks,ProductionYear,BackdropImageTags,People';
+      'Overview,PrimaryImageAspectRatio,MediaSources,Genres,RunTimeTicks,ProductionYear,BackdropImageTags,People,UserData';
 
   Map<String, String> get _headers {
     final deviceId = session?.deviceId ?? 'setup-device';
@@ -171,6 +171,51 @@ class JellyfinClient {
       if (subtitleStreamIndex != null)
         'SubtitleStreamIndex': '$subtitleStreamIndex',
     });
+  }
+
+  Future<void> reportPlaybackStart(JellyfinItem item) async {
+    await _postPlayback('/Sessions/Playing', {
+      'ItemId': item.id,
+      'CanSeek': true,
+      'PlayMethod': 'DirectStream',
+    });
+  }
+
+  Future<void> reportPlaybackProgress(
+    JellyfinItem item, {
+    required Duration position,
+    required bool paused,
+  }) async {
+    await _postPlayback('/Sessions/Playing/Progress', {
+      'ItemId': item.id,
+      'PositionTicks': durationToTicks(position),
+      'IsPaused': paused,
+      'IsMuted': false,
+      'PlayMethod': 'DirectStream',
+    });
+  }
+
+  Future<void> reportPlaybackStopped(
+    JellyfinItem item, {
+    required Duration position,
+  }) async {
+    await _postPlayback('/Sessions/Playing/Stopped', {
+      'ItemId': item.id,
+      'PositionTicks': durationToTicks(position),
+    });
+  }
+
+  Future<void> _postPlayback(String path, Map<String, Object?> body) async {
+    final response = await http.post(
+      _uri(path),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw JellyfinException(
+        'Jellyfin playback report failed with HTTP ${response.statusCode}.',
+      );
+    }
   }
 
   Uri _uri(String path, [Map<String, String>? query]) {

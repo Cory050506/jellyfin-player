@@ -23,6 +23,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   VideoController? _controller;
   AppSettings? _settings;
   String? _error;
+  Timer? _progressTimer;
+  bool _reportedStopped = false;
 
   @override
   void initState() {
@@ -57,8 +59,22 @@ class _PlayerScreenState extends State<PlayerScreen> {
         audioStreamIndex: widget.audioStreamIndex,
         subtitleStreamIndex: widget.subtitleStreamIndex,
       );
-      await player.open(Media(url.toString()), play: true);
+      final resumePosition = widget.item.resumePosition;
+      await player.open(
+        Media(
+          url.toString(),
+          start: resumePosition > const Duration(seconds: 5)
+              ? resumePosition
+              : null,
+        ),
+        play: true,
+      );
       await _applyDefaultTrackSettings(settings);
+      unawaited(widget.client.reportPlaybackStart(widget.item));
+      _progressTimer = Timer.periodic(
+        const Duration(seconds: 10),
+        (_) => unawaited(_reportProgress()),
+      );
     } catch (error) {
       if (mounted) {
         setState(() => _error = friendlyError(error));
@@ -112,8 +128,45 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   void dispose() {
+    _progressTimer?.cancel();
+    unawaited(_reportStopped());
     unawaited(_player?.dispose());
     super.dispose();
+  }
+
+  Future<void> _reportProgress() async {
+    final player = _player;
+    if (player == null) {
+      return;
+    }
+    try {
+      await widget.client.reportPlaybackProgress(
+        widget.item,
+        position: player.state.position,
+        paused: !player.state.playing,
+      );
+    } catch (_) {
+      // Playback reporting should never interrupt local playback.
+    }
+  }
+
+  Future<void> _reportStopped() async {
+    if (_reportedStopped) {
+      return;
+    }
+    _reportedStopped = true;
+    final player = _player;
+    if (player == null) {
+      return;
+    }
+    try {
+      await widget.client.reportPlaybackStopped(
+        widget.item,
+        position: player.state.position,
+      );
+    } catch (_) {
+      // Best effort; the next periodic progress report may already be enough.
+    }
   }
 
   @override
@@ -135,7 +188,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
           ),
           PlayerTopChrome(
             item: widget.item,
-            onBack: () => Navigator.of(context).pop(),
+            onBack: () async {
+              await _reportStopped();
+              if (context.mounted) {
+                Navigator.of(context).pop();
+              }
+            },
             onAudio: player == null ? null : () => _showAudioTracks(player),
             onSubtitles: player == null
                 ? null
@@ -287,7 +345,7 @@ class PlayerTopChrome extends StatelessWidget {
   });
 
   final JellyfinItem item;
-  final VoidCallback onBack;
+  final Future<void> Function() onBack;
   final VoidCallback? onAudio;
   final VoidCallback? onSubtitles;
 
@@ -313,7 +371,7 @@ class PlayerTopChrome extends StatelessWidget {
               children: [
                 IconButton.filledTonal(
                   tooltip: 'Back',
-                  onPressed: onBack,
+                  onPressed: () => unawaited(onBack()),
                   icon: const Icon(Icons.arrow_back_rounded),
                 ),
                 const SizedBox(width: 12),

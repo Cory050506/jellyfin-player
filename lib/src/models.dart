@@ -103,6 +103,7 @@ class JellyfinItem {
     required this.indexNumber,
     required this.seriesName,
     required this.seasonName,
+    required this.playbackPositionTicks,
     required this.mediaStreams,
     required this.people,
   });
@@ -119,6 +120,7 @@ class JellyfinItem {
   final int? indexNumber;
   final String? seriesName;
   final String? seasonName;
+  final int playbackPositionTicks;
   final List<JellyfinMediaStream> mediaStreams;
   final List<JellyfinPerson> people;
 
@@ -169,6 +171,9 @@ class JellyfinItem {
     return '${minutes}m';
   }
 
+  Duration get resumePosition =>
+      Duration(microseconds: playbackPositionTicks ~/ 10);
+
   List<JellyfinMediaStream> get audioStreams =>
       mediaStreams.where((stream) => stream.type == 'Audio').toList();
 
@@ -179,6 +184,7 @@ class JellyfinItem {
     final tags = json['ImageTags'] as Map<String, dynamic>? ?? {};
     final backdropTags = json['BackdropImageTags'] as List<dynamic>? ?? [];
     final mediaSources = json['MediaSources'] as List<dynamic>? ?? [];
+    final userData = json['UserData'] as Map<String, dynamic>? ?? {};
     final streams = mediaSources.isEmpty
         ? <dynamic>[]
         : (mediaSources.first as Map<String, dynamic>)['MediaStreams']
@@ -197,6 +203,8 @@ class JellyfinItem {
       indexNumber: json['IndexNumber'] as int?,
       seriesName: json['SeriesName'] as String?,
       seasonName: json['SeasonName'] as String?,
+      playbackPositionTicks:
+          (userData['PlaybackPositionTicks'] as num?)?.toInt() ?? 0,
       mediaStreams: streams
           .map(
             (stream) =>

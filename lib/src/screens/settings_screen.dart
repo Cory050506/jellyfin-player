@@ -183,7 +183,6 @@ class SettingsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: AppColors.panel.withValues(alpha: 0.82),
-      borderRadius: BorderRadius.circular(8),
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),

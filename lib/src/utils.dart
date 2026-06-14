@@ -155,6 +155,8 @@ String formatDuration(Duration duration) {
   return '$minutes:$seconds';
 }
 
+int durationToTicks(Duration duration) => duration.inMicroseconds * 10;
+
 class JellyfinException implements Exception {
   const JellyfinException(this.message);
 
