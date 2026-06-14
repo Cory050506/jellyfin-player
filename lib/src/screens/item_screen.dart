@@ -55,14 +55,24 @@ class _ItemScreenState extends State<ItemScreen> {
     }
   }
 
-  void _play(JellyfinItem item) {
+  Future<void> _play(JellyfinItem item) async {
+    final playableItem = item.mediaStreams.isEmpty
+        ? await widget.client.getItemDetails(item.id)
+        : item;
+    if (!mounted) {
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => PlayerScreen(
           client: widget.client,
-          item: item,
-          audioStreamIndex: _selectedAudioStreamIndex,
-          subtitleStreamIndex: _selectedSubtitleStreamIndex,
+          item: playableItem,
+          audioStreamIndex: item.id == widget.item.id
+              ? _selectedAudioStreamIndex
+              : null,
+          subtitleStreamIndex: item.id == widget.item.id
+              ? _selectedSubtitleStreamIndex
+              : null,
         ),
       ),
     );
@@ -86,7 +96,7 @@ class _ItemScreenState extends State<ItemScreen> {
                     backdropUrl: widget.client.backdropUrl(item, width: 1600),
                     posterUrl: widget.client.imageUrl(item, width: 700),
                     item: item,
-                    onPlay: isPlayable ? () => _play(item) : null,
+                    onPlay: isPlayable ? () => unawaited(_play(item)) : null,
                   ),
                 ),
               ),
@@ -126,7 +136,7 @@ class _ItemScreenState extends State<ItemScreen> {
                     client: widget.client,
                     future: _childrenFuture!,
                     parent: item,
-                    onPlayableTap: _play,
+                    onPlayableTap: (item) => unawaited(_play(item)),
                   ),
                 SimilarSection(client: widget.client, future: _similarFuture),
               ],

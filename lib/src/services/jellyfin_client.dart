@@ -165,7 +165,6 @@ class JellyfinClient {
     return _uri('/Videos/${item.id}/stream', {
       if (settings.directStream) 'static': 'true',
       'api_key': session!.accessToken,
-      'mediaSourceId': item.id,
       if (audioStreamIndex != null) 'AudioStreamIndex': '$audioStreamIndex',
       if (subtitleStreamIndex != null)
         'SubtitleStreamIndex': '$subtitleStreamIndex',
