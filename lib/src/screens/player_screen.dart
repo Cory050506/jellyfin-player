@@ -330,46 +330,56 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         controls: NoVideoControls,
                       ),
               ),
-              AnimatedOpacity(
-                opacity: _controlsVisible ? 1 : 0,
-                duration: const Duration(milliseconds: 200),
-                child: IgnorePointer(
-                  ignoring: !_controlsVisible,
-                  child: Listener(
-                    onPointerDown: (_) => _showControls(),
-                    child: PlayerTopChrome(
-                      item: widget.item,
-                      onBack: () async {
-                        await _reportStopped();
-                        if (context.mounted) {
-                          Navigator.of(context).pop();
-                        }
-                      },
-                      onAudio: player == null
-                          ? null
-                          : () => _showAudioTracks(player),
-                      onSubtitles: player == null
-                          ? null
-                          : () => _showSubtitleTracks(player),
-                      isFullscreen: _isFullscreen,
-                      onFullscreen: isDesktopPlatform
-                          ? _toggleFullscreen
-                          : null,
-                    ),
-                  ),
-                ),
-              ),
-              if (player != null)
-                AnimatedOpacity(
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: AnimatedOpacity(
                   opacity: _controlsVisible ? 1 : 0,
                   duration: const Duration(milliseconds: 200),
                   child: IgnorePointer(
                     ignoring: !_controlsVisible,
                     child: Listener(
                       onPointerDown: (_) => _showControls(),
-                      child: PlayerBottomChrome(
-                        player: player,
+                      child: PlayerTopChrome(
                         item: widget.item,
+                        onBack: () async {
+                          await _reportStopped();
+                          if (context.mounted) {
+                            Navigator.of(context).pop();
+                          }
+                        },
+                        onAudio: player == null
+                            ? null
+                            : () => _showAudioTracks(player),
+                        onSubtitles: player == null
+                            ? null
+                            : () => _showSubtitleTracks(player),
+                        isFullscreen: _isFullscreen,
+                        onFullscreen: isDesktopPlatform
+                            ? _toggleFullscreen
+                            : null,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              if (player != null)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: AnimatedOpacity(
+                    opacity: _controlsVisible ? 1 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: IgnorePointer(
+                      ignoring: !_controlsVisible,
+                      child: Listener(
+                        onPointerDown: (_) => _showControls(),
+                        child: PlayerBottomChrome(
+                          player: player,
+                          item: widget.item,
+                        ),
                       ),
                     ),
                   ),
@@ -530,79 +540,74 @@ class PlayerTopChrome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xdd000000), Color(0x00000000)],
-          ),
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xdd000000), Color(0x00000000)],
         ),
-        child: SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 42),
-            child: Row(
-              children: [
-                IconButton.filledTonal(
-                  tooltip: 'Back',
-                  onPressed: () => unawaited(onBack()),
-                  icon: const Icon(Icons.arrow_back_rounded),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 42),
+          child: Row(
+            children: [
+              IconButton.filledTonal(
+                tooltip: 'Back',
+                onPressed: () => unawaited(onBack()),
+                icon: const Icon(Icons.arrow_back_rounded),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      item.displayTitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
+                    ),
+                    if (item.subtitle.isNotEmpty)
                       Text(
-                        item.displayTitle,
+                        item.subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                        ),
+                        style: const TextStyle(color: Colors.white70),
                       ),
-                      if (item.subtitle.isNotEmpty)
-                        Text(
-                          item.subtitle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.white70),
-                        ),
-                    ],
-                  ),
+                  ],
                 ),
-                IconButton.filledTonal(
-                  tooltip: 'Audio tracks',
-                  onPressed: onAudio,
-                  icon: const Icon(Icons.spatial_audio_rounded),
-                ),
+              ),
+              IconButton.filledTonal(
+                tooltip: 'Audio tracks',
+                onPressed: onAudio,
+                icon: const Icon(Icons.spatial_audio_rounded),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filledTonal(
+                tooltip: 'Subtitles',
+                onPressed: onSubtitles,
+                icon: const Icon(Icons.subtitles_rounded),
+              ),
+              if (onFullscreen != null) ...[
                 const SizedBox(width: 8),
                 IconButton.filledTonal(
-                  tooltip: 'Subtitles',
-                  onPressed: onSubtitles,
-                  icon: const Icon(Icons.subtitles_rounded),
-                ),
-                if (onFullscreen != null) ...[
-                  const SizedBox(width: 8),
-                  IconButton.filledTonal(
-                    tooltip: isFullscreen ? 'Exit full screen' : 'Full screen',
-                    onPressed: () => unawaited(onFullscreen!()),
-                    icon: Icon(
-                      isFullscreen
-                          ? Icons.fullscreen_exit_rounded
-                          : Icons.fullscreen_rounded,
-                    ),
+                  tooltip: isFullscreen ? 'Exit full screen' : 'Full screen',
+                  onPressed: () => unawaited(onFullscreen!()),
+                  icon: Icon(
+                    isFullscreen
+                        ? Icons.fullscreen_exit_rounded
+                        : Icons.fullscreen_rounded,
                   ),
-                ],
+                ),
               ],
-            ),
+            ],
           ),
         ),
       ),
@@ -622,136 +627,131 @@ class PlayerBottomChrome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 0,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.bottomCenter,
-            end: Alignment.topCenter,
-            colors: [Color(0xdd000000), Color(0x00000000)],
-          ),
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          colors: [Color(0xdd000000), Color(0x00000000)],
         ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 46, 20, 18),
-            child: StreamBuilder<Duration>(
-              stream: player.stream.position,
-              initialData: player.state.position,
-              builder: (context, positionSnapshot) {
-                return StreamBuilder<Duration>(
-                  stream: player.stream.duration,
-                  initialData: player.state.duration,
-                  builder: (context, durationSnapshot) {
-                    final position = positionSnapshot.data ?? Duration.zero;
-                    final duration = durationSnapshot.data ?? Duration.zero;
-                    final max = duration.inMilliseconds <= 0
-                        ? 1.0
-                        : duration.inMilliseconds.toDouble();
-                    final value = position.inMilliseconds
-                        .clamp(0, max.toInt())
-                        .toDouble();
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
-                          children: [
-                            IconButton.filledTonal(
-                              tooltip: 'Back 10 seconds',
-                              onPressed: () {
-                                final target =
-                                    position - const Duration(seconds: 10);
-                                unawaited(
-                                  player.seek(
-                                    target < Duration.zero
-                                        ? Duration.zero
-                                        : target,
-                                  ),
-                                );
-                              },
-                              icon: const Icon(Icons.replay_10_rounded),
-                            ),
-                            const SizedBox(width: 8),
-                            StreamBuilder<bool>(
-                              stream: player.stream.playing,
-                              initialData: player.state.playing,
-                              builder: (context, snapshot) {
-                                final playing = snapshot.data ?? false;
-                                return IconButton.filled(
-                                  tooltip: playing ? 'Pause' : 'Play',
-                                  onPressed: () =>
-                                      unawaited(player.playOrPause()),
-                                  icon: Icon(
-                                    playing
-                                        ? Icons.pause_rounded
-                                        : Icons.play_arrow_rounded,
-                                  ),
-                                );
-                              },
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton.filledTonal(
-                              tooltip: 'Forward 30 seconds',
-                              onPressed: () {
-                                final target =
-                                    position + const Duration(seconds: 30);
-                                unawaited(
-                                  player.seek(
-                                    target > duration ? duration : target,
-                                  ),
-                                );
-                              },
-                              icon: const Icon(Icons.forward_30_rounded),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              '${formatDuration(position)} / ${formatDuration(duration)}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const Spacer(),
-                            if (item.episodeCode.isNotEmpty)
-                              DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.white10),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 46, 20, 18),
+          child: StreamBuilder<Duration>(
+            stream: player.stream.position,
+            initialData: player.state.position,
+            builder: (context, positionSnapshot) {
+              return StreamBuilder<Duration>(
+                stream: player.stream.duration,
+                initialData: player.state.duration,
+                builder: (context, durationSnapshot) {
+                  final position = positionSnapshot.data ?? Duration.zero;
+                  final duration = durationSnapshot.data ?? Duration.zero;
+                  final max = duration.inMilliseconds <= 0
+                      ? 1.0
+                      : duration.inMilliseconds.toDouble();
+                  final value = position.inMilliseconds
+                      .clamp(0, max.toInt())
+                      .toDouble();
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          IconButton.filledTonal(
+                            tooltip: 'Back 10 seconds',
+                            onPressed: () {
+                              final target =
+                                  position - const Duration(seconds: 10);
+                              unawaited(
+                                player.seek(
+                                  target < Duration.zero
+                                      ? Duration.zero
+                                      : target,
                                 ),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 7,
-                                  ),
-                                  child: Text(
-                                    item.episodeCode,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        Slider(
-                          min: 0,
-                          max: max,
-                          value: value,
-                          onChanged: (next) => unawaited(
-                            player.seek(Duration(milliseconds: next.round())),
+                              );
+                            },
+                            icon: const Icon(Icons.replay_10_rounded),
                           ),
+                          const SizedBox(width: 8),
+                          StreamBuilder<bool>(
+                            stream: player.stream.playing,
+                            initialData: player.state.playing,
+                            builder: (context, snapshot) {
+                              final playing = snapshot.data ?? false;
+                              return IconButton.filled(
+                                tooltip: playing ? 'Pause' : 'Play',
+                                onPressed: () =>
+                                    unawaited(player.playOrPause()),
+                                icon: Icon(
+                                  playing
+                                      ? Icons.pause_rounded
+                                      : Icons.play_arrow_rounded,
+                                ),
+                              );
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton.filledTonal(
+                            tooltip: 'Forward 30 seconds',
+                            onPressed: () {
+                              final target =
+                                  position + const Duration(seconds: 30);
+                              unawaited(
+                                player.seek(
+                                  target > duration ? duration : target,
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.forward_30_rounded),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            '${formatDuration(position)} / ${formatDuration(duration)}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (item.episodeCode.isNotEmpty)
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.white10),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 7,
+                                ),
+                                child: Text(
+                                  item.episodeCode,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      Slider(
+                        min: 0,
+                        max: max,
+                        value: value,
+                        onChanged: (next) => unawaited(
+                          player.seek(Duration(milliseconds: next.round())),
                         ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
           ),
         ),
       ),
