@@ -26,6 +26,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Timer? _progressTimer;
   bool _reportedStopped = false;
   bool _isFullscreen = false;
+  bool _controlsVisible = true;
+  Timer? _hideControlsTimer;
+  final FocusNode _focusNode = FocusNode();
 
   @override
   void initState() {
@@ -33,6 +36,42 @@ class _PlayerScreenState extends State<PlayerScreen> {
     unawaited(_initialize());
     if (isDesktopPlatform) {
       unawaited(_syncFullscreenState());
+    }
+    _scheduleHideControls();
+  }
+
+  void _scheduleHideControls() {
+    _hideControlsTimer?.cancel();
+    _hideControlsTimer = Timer(
+      const Duration(seconds: 4),
+      () => mounted ? setState(() => _controlsVisible = false) : null,
+    );
+  }
+
+  void _showControls() {
+    setState(() => _controlsVisible = true);
+    _scheduleHideControls();
+  }
+
+  void _toggleControls() {
+    if (_controlsVisible) {
+      _hideControlsTimer?.cancel();
+      setState(() => _controlsVisible = false);
+    } else {
+      _showControls();
+    }
+  }
+
+  void _handleKeyEvent(KeyEvent event) {
+    if (event is! KeyDownEvent) {
+      return;
+    }
+    final key = event.logicalKey;
+    if (key == LogicalKeyboardKey.arrowUp ||
+        key == LogicalKeyboardKey.arrowDown) {
+      _toggleControls();
+    } else if (_controlsVisible) {
+      _scheduleHideControls();
     }
   }
 
@@ -219,6 +258,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void dispose() {
     _progressTimer?.cancel();
+    _hideControlsTimer?.cancel();
+    _focusNode.dispose();
     unawaited(_reportStopped());
     unawaited(_player?.dispose());
     if (_isFullscreen) {
@@ -269,38 +310,65 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final settings = _settings;
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Center(
-            child: _error != null
-                ? ErrorPane(message: _error!, dark: true)
-                : controller == null || settings == null
-                ? const CircularProgressIndicator()
-                : Video(
-                    controller: controller,
-                    fit: settings.boxFit,
-                    controls: NoVideoControls,
+      body: KeyboardListener(
+        focusNode: _focusNode,
+        autofocus: true,
+        onKeyEvent: _handleKeyEvent,
+        child: MouseRegion(
+          onHover: (_) => _showControls(),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Center(
+                child: _error != null
+                    ? ErrorPane(message: _error!, dark: true)
+                    : controller == null || settings == null
+                    ? const CircularProgressIndicator()
+                    : Video(
+                        controller: controller,
+                        fit: settings.boxFit,
+                        controls: NoVideoControls,
+                      ),
+              ),
+              AnimatedOpacity(
+                opacity: _controlsVisible ? 1 : 0,
+                duration: const Duration(milliseconds: 200),
+                child: IgnorePointer(
+                  ignoring: !_controlsVisible,
+                  child: PlayerTopChrome(
+                    item: widget.item,
+                    onBack: () async {
+                      await _reportStopped();
+                      if (context.mounted) {
+                        Navigator.of(context).pop();
+                      }
+                    },
+                    onAudio: player == null
+                        ? null
+                        : () => _showAudioTracks(player),
+                    onSubtitles: player == null
+                        ? null
+                        : () => _showSubtitleTracks(player),
+                    isFullscreen: _isFullscreen,
+                    onFullscreen: isDesktopPlatform ? _toggleFullscreen : null,
                   ),
+                ),
+              ),
+              if (player != null)
+                AnimatedOpacity(
+                  opacity: _controlsVisible ? 1 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: IgnorePointer(
+                    ignoring: !_controlsVisible,
+                    child: PlayerBottomChrome(
+                      player: player,
+                      item: widget.item,
+                    ),
+                  ),
+                ),
+            ],
           ),
-          PlayerTopChrome(
-            item: widget.item,
-            onBack: () async {
-              await _reportStopped();
-              if (context.mounted) {
-                Navigator.of(context).pop();
-              }
-            },
-            onAudio: player == null ? null : () => _showAudioTracks(player),
-            onSubtitles: player == null
-                ? null
-                : () => _showSubtitleTracks(player),
-            isFullscreen: _isFullscreen,
-            onFullscreen: isDesktopPlatform ? _toggleFullscreen : null,
-          ),
-          if (player != null)
-            PlayerBottomChrome(player: player, item: widget.item),
-        ],
+        ),
       ),
     );
   }
