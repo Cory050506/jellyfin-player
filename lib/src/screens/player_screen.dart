@@ -178,15 +178,17 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
     final tracks = await _waitForTracks(player);
 
+    AudioTrack targetAudio = AudioTrack.auto();
     final audioIndex = widget.audioStreamIndex;
     if (audioIndex != null) {
       final position = _streamPosition(widget.item.audioStreams, audioIndex);
       final match = _audioTrackAtPosition(tracks.audio, position);
-      await player.setAudioTrack(match ?? AudioTrack.auto());
-    } else {
-      await player.setAudioTrack(AudioTrack.auto());
+      if (match != null) {
+        targetAudio = match;
+      }
     }
 
+    SubtitleTrack targetSubtitle = SubtitleTrack.auto();
     final subtitleIndex = widget.subtitleStreamIndex;
     if (subtitleIndex != null) {
       final position = _streamPosition(
@@ -194,11 +196,39 @@ class _PlayerScreenState extends State<PlayerScreen> {
         subtitleIndex,
       );
       final match = _subtitleTrackAtPosition(tracks.subtitle, position);
-      await player.setSubtitleTrack(match ?? SubtitleTrack.no());
+      targetSubtitle = match ?? SubtitleTrack.no();
     } else if (settings.subtitleMode == DefaultSubtitleMode.off) {
-      await player.setSubtitleTrack(SubtitleTrack.no());
-    } else {
-      await player.setSubtitleTrack(SubtitleTrack.auto());
+      targetSubtitle = SubtitleTrack.no();
+    }
+
+    await player.setAudioTrack(targetAudio);
+    await player.setSubtitleTrack(targetSubtitle);
+
+    // mpv can reset to its own default track selection shortly after a file
+    // finishes loading, racing with the explicit selection above. Re-apply
+    // once playback has actually started so the user's choice sticks.
+    unawaited(_reapplyTrackSettings(player, targetAudio, targetSubtitle));
+  }
+
+  Future<void> _reapplyTrackSettings(
+    Player player,
+    AudioTrack audio,
+    SubtitleTrack subtitle,
+  ) async {
+    try {
+      if (!player.state.playing) {
+        await player.stream.playing
+            .firstWhere((playing) => playing)
+            .timeout(const Duration(seconds: 5));
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      if (!mounted || _player != player) {
+        return;
+      }
+      await player.setAudioTrack(audio);
+      await player.setSubtitleTrack(subtitle);
+    } catch (_) {
+      // Best effort; if this fails the initial selection still applies.
     }
   }
 
