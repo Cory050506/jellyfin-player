@@ -10,7 +10,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(find.text('Jellyfin Player'), findsOneWidget);
-    expect(find.text('Connect'), findsOneWidget);
+    expect(find.text('Server URL'), findsOneWidget);
+    expect(find.text('Username'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
   });
 
   test('normalizes server URLs', () {
