@@ -184,7 +184,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
                 ? ErrorPane(message: _error!, dark: true)
                 : controller == null || settings == null
                 ? const CircularProgressIndicator()
-                : Video(controller: controller, fit: settings.boxFit),
+                : Video(
+                    controller: controller,
+                    fit: settings.boxFit,
+                    controls: NoVideoControls,
+                  ),
           ),
           PlayerTopChrome(
             item: widget.item,
