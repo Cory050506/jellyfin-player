@@ -19,7 +19,7 @@ class _ItemScreenState extends State<ItemScreen> {
     if (widget.item.type == 'Series' ||
         widget.item.type == 'Season' ||
         widget.item.type == 'Folder') {
-      _childrenFuture = widget.client.getItems(widget.item.id);
+      _childrenFuture = widget.client.getChildren(widget.item.id);
     }
   }
 

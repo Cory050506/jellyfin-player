@@ -30,7 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final libraries = await _client.getLibraries();
     if (libraries.isNotEmpty) {
       _selectedLibrary = libraries.first;
-      _itemsFuture = _client.getItems(libraries.first.id);
+      _itemsFuture = _client.getItems(libraries.first);
     }
     return libraries;
   }
@@ -38,7 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _selectLibrary(JellyfinLibrary library) {
     setState(() {
       _selectedLibrary = library;
-      _itemsFuture = _client.getItems(library.id);
+      _itemsFuture = _client.getItems(library);
     });
   }
 
@@ -79,7 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       if (_selectedLibrary == null) {
                         _librariesFuture = _loadLibraries();
                       } else {
-                        _itemsFuture = _client.getItems(_selectedLibrary!.id);
+                        _itemsFuture = _client.getItems(_selectedLibrary!);
                       }
                     });
                   },
@@ -216,6 +216,17 @@ class MediaSidebar extends StatelessWidget {
                   selected: false,
                   expanded: wide,
                   onPressed: onRefresh,
+                ),
+                SidebarButton(
+                  icon: Icons.settings_rounded,
+                  label: 'Settings',
+                  selected: false,
+                  expanded: wide,
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    );
+                  },
                 ),
                 SidebarButton(
                   icon: Icons.logout_rounded,

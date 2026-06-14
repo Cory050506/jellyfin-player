@@ -61,7 +61,28 @@ class JellyfinClient {
         .toList();
   }
 
-  Future<List<JellyfinItem>> getItems(String parentId) async {
+  Future<List<JellyfinItem>> getItems(JellyfinLibrary library) async {
+    final userId = session!.userId;
+    final movieLibrary = library.collectionType == 'movies';
+    final response = await http.get(
+      _uri('/Users/$userId/Items', {
+        'ParentId': library.id,
+        if (movieLibrary) ...{'Recursive': 'true', 'IncludeItemTypes': 'Movie'},
+        'SortBy': 'SortName',
+        'SortOrder': 'Ascending',
+        'Fields':
+            'Overview,PrimaryImageAspectRatio,MediaSources,Genres,RunTimeTicks,ProductionYear,BackdropImageTags',
+        'Limit': '200',
+      }),
+      headers: _headers,
+    );
+    final body = decodeResponse(response);
+    return (body['Items'] as List<dynamic>? ?? [])
+        .map((item) => JellyfinItem.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<JellyfinItem>> getChildren(String parentId) async {
     final userId = session!.userId;
     final response = await http.get(
       _uri('/Users/$userId/Items', {
@@ -70,7 +91,7 @@ class JellyfinClient {
         'SortOrder': 'Ascending',
         'Fields':
             'Overview,PrimaryImageAspectRatio,MediaSources,Genres,RunTimeTicks,ProductionYear,BackdropImageTags',
-        'Limit': '200',
+        'Limit': '300',
       }),
       headers: _headers,
     );
@@ -100,10 +121,11 @@ class JellyfinClient {
     return _uri('/Items/${item.id}/Images/Backdrop/0', query);
   }
 
-  Uri streamUrl(JellyfinItem item) {
+  Uri streamUrl(JellyfinItem item, AppSettings settings) {
     return _uri('/Videos/${item.id}/stream', {
-      'static': 'true',
+      if (settings.directStream) 'static': 'true',
       'api_key': session!.accessToken,
+      'mediaSourceId': item.id,
     });
   }
 

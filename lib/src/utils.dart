@@ -46,6 +46,83 @@ IconData iconForLibrary(String type) {
   };
 }
 
+T enumByName<T extends Enum>(List<T> values, String? name, T fallback) {
+  for (final value in values) {
+    if (value.name == name) {
+      return value;
+    }
+  }
+  return fallback;
+}
+
+String hdrModeLabel(HdrMode mode) {
+  return switch (mode) {
+    HdrMode.passthrough => 'Passthrough',
+    HdrMode.toneMap => 'Tone map',
+    HdrMode.off => 'Off',
+  };
+}
+
+String hdrModeDescription(HdrMode mode) {
+  return switch (mode) {
+    HdrMode.passthrough =>
+      'Ask mpv to preserve HDR output when the display path allows it.',
+    HdrMode.toneMap =>
+      'Map HDR to SDR for displays or OS modes that do not handle HDR.',
+    HdrMode.off => 'Use mpv defaults without extra HDR handling.',
+  };
+}
+
+String subtitleModeLabel(DefaultSubtitleMode mode) {
+  return switch (mode) {
+    DefaultSubtitleMode.auto => 'Auto',
+    DefaultSubtitleMode.off => 'Off',
+  };
+}
+
+String playerFitLabel(PlayerFit fit) {
+  return switch (fit) {
+    PlayerFit.contain => 'Contain',
+    PlayerFit.cover => 'Cover',
+    PlayerFit.fill => 'Fill',
+  };
+}
+
+String audioTrackLabel(AudioTrack track) {
+  if (track.id == 'auto') {
+    return 'Auto';
+  }
+  if (track.id == 'no') {
+    return 'Off';
+  }
+  final details = [
+    if (track.language != null && track.language!.isNotEmpty) track.language!,
+    if (track.codec != null && track.codec!.isNotEmpty) track.codec!,
+    if (track.channels != null && track.channels!.isNotEmpty) track.channels!,
+  ];
+  final title = track.title == null || track.title!.isEmpty
+      ? 'Audio ${track.id}'
+      : track.title!;
+  return details.isEmpty ? title : '$title  ${details.join(' / ')}';
+}
+
+String subtitleTrackLabel(SubtitleTrack track) {
+  if (track.id == 'auto') {
+    return 'Auto';
+  }
+  if (track.id == 'no') {
+    return 'Off';
+  }
+  final details = [
+    if (track.language != null && track.language!.isNotEmpty) track.language!,
+    if (track.codec != null && track.codec!.isNotEmpty) track.codec!,
+  ];
+  final title = track.title == null || track.title!.isEmpty
+      ? 'Subtitle ${track.id}'
+      : track.title!;
+  return details.isEmpty ? title : '$title  ${details.join(' / ')}';
+}
+
 class JellyfinException implements Exception {
   const JellyfinException(this.message);
 

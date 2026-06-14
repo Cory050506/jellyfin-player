@@ -151,3 +151,121 @@ class JellyfinItem {
     );
   }
 }
+
+class AppSettings {
+  const AppSettings({
+    required this.directStream,
+    required this.highBitrateCache,
+    required this.hardwareDecoding,
+    required this.hdrMode,
+    required this.subtitleMode,
+    required this.audioMode,
+    required this.subtitleOffsetMs,
+    required this.playerFit,
+  });
+
+  static const defaults = AppSettings(
+    directStream: true,
+    highBitrateCache: true,
+    hardwareDecoding: true,
+    hdrMode: HdrMode.passthrough,
+    subtitleMode: DefaultSubtitleMode.auto,
+    audioMode: DefaultAudioMode.auto,
+    subtitleOffsetMs: 0,
+    playerFit: PlayerFit.contain,
+  );
+
+  final bool directStream;
+  final bool highBitrateCache;
+  final bool hardwareDecoding;
+  final HdrMode hdrMode;
+  final DefaultSubtitleMode subtitleMode;
+  final DefaultAudioMode audioMode;
+  final int subtitleOffsetMs;
+  final PlayerFit playerFit;
+
+  int get bufferSizeBytes =>
+      highBitrateCache ? 512 * 1024 * 1024 : 64 * 1024 * 1024;
+
+  BoxFit get boxFit {
+    return switch (playerFit) {
+      PlayerFit.contain => BoxFit.contain,
+      PlayerFit.cover => BoxFit.cover,
+      PlayerFit.fill => BoxFit.fill,
+    };
+  }
+
+  AppSettings copyWith({
+    bool? directStream,
+    bool? highBitrateCache,
+    bool? hardwareDecoding,
+    HdrMode? hdrMode,
+    DefaultSubtitleMode? subtitleMode,
+    DefaultAudioMode? audioMode,
+    int? subtitleOffsetMs,
+    PlayerFit? playerFit,
+  }) {
+    return AppSettings(
+      directStream: directStream ?? this.directStream,
+      highBitrateCache: highBitrateCache ?? this.highBitrateCache,
+      hardwareDecoding: hardwareDecoding ?? this.hardwareDecoding,
+      hdrMode: hdrMode ?? this.hdrMode,
+      subtitleMode: subtitleMode ?? this.subtitleMode,
+      audioMode: audioMode ?? this.audioMode,
+      subtitleOffsetMs: subtitleOffsetMs ?? this.subtitleOffsetMs,
+      playerFit: playerFit ?? this.playerFit,
+    );
+  }
+
+  Map<String, Object> toJson() => {
+    'directStream': directStream,
+    'highBitrateCache': highBitrateCache,
+    'hardwareDecoding': hardwareDecoding,
+    'hdrMode': hdrMode.name,
+    'subtitleMode': subtitleMode.name,
+    'audioMode': audioMode.name,
+    'subtitleOffsetMs': subtitleOffsetMs,
+    'playerFit': playerFit.name,
+  };
+
+  static AppSettings fromJson(Map<String, dynamic> json) {
+    final defaults = AppSettings.defaults;
+    return AppSettings(
+      directStream: json['directStream'] as bool? ?? defaults.directStream,
+      highBitrateCache:
+          json['highBitrateCache'] as bool? ?? defaults.highBitrateCache,
+      hardwareDecoding:
+          json['hardwareDecoding'] as bool? ?? defaults.hardwareDecoding,
+      hdrMode: enumByName(
+        HdrMode.values,
+        json['hdrMode'] as String?,
+        defaults.hdrMode,
+      ),
+      subtitleMode: enumByName(
+        DefaultSubtitleMode.values,
+        json['subtitleMode'] as String?,
+        defaults.subtitleMode,
+      ),
+      audioMode: enumByName(
+        DefaultAudioMode.values,
+        json['audioMode'] as String?,
+        defaults.audioMode,
+      ),
+      subtitleOffsetMs:
+          json['subtitleOffsetMs'] as int? ?? defaults.subtitleOffsetMs,
+      playerFit: enumByName(
+        PlayerFit.values,
+        json['playerFit'] as String?,
+        defaults.playerFit,
+      ),
+    );
+  }
+}
+
+enum HdrMode { passthrough, toneMap, off }
+
+enum DefaultSubtitleMode { auto, off }
+
+enum DefaultAudioMode { auto }
+
+enum PlayerFit { contain, cover, fill }
