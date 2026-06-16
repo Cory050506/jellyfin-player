@@ -33,6 +33,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void initState() {
     super.initState();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     unawaited(_initialize());
     if (isDesktopPlatform) {
       unawaited(_syncFullscreenState());
@@ -317,6 +318,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _progressTimer?.cancel();
     _hideControlsTimer?.cancel();
     _focusNode.dispose();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     unawaited(_reportStopped());
     unawaited(_player?.dispose());
     if (_isFullscreen) {
