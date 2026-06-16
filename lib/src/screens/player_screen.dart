@@ -130,6 +130,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
         // Give the widget one frame to attach the platform view before loading.
         await Future<void>.delayed(const Duration(milliseconds: 100));
         if (!mounted) return;
+        await ctrl.initialize();
+        if (!mounted) return;
         final url = widget.client.streamUrl(
           widget.item,
           settings,
