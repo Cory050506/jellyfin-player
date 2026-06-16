@@ -74,6 +74,21 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
   }
 
+  Future<void> _onVideoTap() async {
+    if (_useNativePlayer) {
+      final nc = _nativeController;
+      if (nc == null) return;
+      if (await nc.isPlaying()) {
+        await nc.pause();
+      } else {
+        await nc.play();
+      }
+    } else {
+      unawaited(_player?.playOrPause());
+    }
+    _showControls();
+  }
+
   void _handleKeyEvent(KeyEvent event) {
     if (event is! KeyDownEvent) {
       return;
@@ -190,6 +205,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
         settings,
         audioStreamIndex: widget.audioStreamIndex,
         subtitleStreamIndex: widget.subtitleStreamIndex,
+        useHls: true,
       );
       await controller.loadVideo(
         VideoSource(path: url.toString(), type: VideoSourceType.network),
@@ -504,6 +520,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
             fit: StackFit.expand,
             children: [
               Center(child: videoSurface),
+              // Tap anywhere to toggle play/pause; show controls briefly.
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: _onVideoTap,
+                ),
+              ),
               Positioned(
                 top: 0,
                 left: 0,

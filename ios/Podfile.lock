@@ -4,11 +4,14 @@ PODS:
     - Flutter
   - media_kit_video (0.0.1):
     - Flutter
+  - native_video_player (4.0.0):
+    - Flutter
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
   - media_kit_libs_ios_video (from `.symlinks/plugins/media_kit_libs_ios_video/ios`)
   - media_kit_video (from `.symlinks/plugins/media_kit_video/ios`)
+  - native_video_player (from `.symlinks/plugins/native_video_player/ios`)
 
 EXTERNAL SOURCES:
   Flutter:
@@ -17,11 +20,14 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/media_kit_libs_ios_video/ios"
   media_kit_video:
     :path: ".symlinks/plugins/media_kit_video/ios"
+  native_video_player:
+    :path: ".symlinks/plugins/native_video_player/ios"
 
 SPEC CHECKSUMS:
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   media_kit_libs_ios_video: 5a18affdb97d1f5d466dc79988b13eff6c5e2854
   media_kit_video: 1746e198cb697d1ffb734b1d05ec429d1fcd1474
+  native_video_player: 6809dec117e8997161dbfb42a6f90d6df71a504d
 
 PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e
 

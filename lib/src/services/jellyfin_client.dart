@@ -163,7 +163,21 @@ class JellyfinClient {
     AppSettings settings, {
     int? audioStreamIndex,
     int? subtitleStreamIndex,
+    bool useHls = false,
   }) {
+    if (useHls) {
+      // HLS endpoint: Jellyfin remuxes the container (e.g. MKV→MPEG-TS) while
+      // passing through video/audio streams untouched. AVPlayer requires this
+      // for any container that isn't natively supported (MKV, etc).
+      return _uri('/Videos/${item.id}/master.m3u8', {
+        'api_key': session!.accessToken,
+        'VideoCodec': 'h264,hevc,av1',
+        'AudioCodec': 'aac,mp3,ac3,eac3,flac,opus',
+        if (audioStreamIndex != null) 'AudioStreamIndex': '$audioStreamIndex',
+        if (subtitleStreamIndex != null)
+          'SubtitleStreamIndex': '$subtitleStreamIndex',
+      });
+    }
     return _uri('/Videos/${item.id}/stream', {
       if (settings.directStream) 'static': 'true',
       'api_key': session!.accessToken,
