@@ -23,11 +23,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Player? _player;
   VideoController? _controller;
 
-  // native_video_player backend (iOS)
+  // better_native_video_player backend (iOS)
   NativeVideoPlayerController? _nativeController;
-  final _nativePosition = StreamController<Duration>.broadcast();
-  final _nativeDuration = StreamController<Duration>.broadcast();
-  final _nativePlaying = StreamController<bool>.broadcast();
 
   AppSettings? _settings;
   String? _error;
@@ -78,7 +75,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (_useNativePlayer) {
       final nc = _nativeController;
       if (nc == null) return;
-      if (await nc.isPlaying()) {
+      if (nc.activityState == PlayerActivityState.playing) {
         await nc.pause();
       } else {
         await nc.play();
@@ -124,7 +121,33 @@ class _PlayerScreenState extends State<PlayerScreen> {
       setState(() => _settings = settings);
 
       if (_useNativePlayer) {
-        // iOS: NativeVideoPlayerView will call _onNativeViewReady once ready.
+        final ctrl = NativeVideoPlayerController(
+          id: 0,
+          showNativeControls: false,
+          allowsPictureInPicture: true,
+        );
+        setState(() => _nativeController = ctrl);
+        // Give the widget one frame to attach the platform view before loading.
+        await Future<void>.delayed(const Duration(milliseconds: 100));
+        if (!mounted) return;
+        final url = widget.client.streamUrl(
+          widget.item,
+          settings,
+          audioStreamIndex: widget.audioStreamIndex,
+          subtitleStreamIndex: widget.subtitleStreamIndex,
+          useHls: true,
+        );
+        final resume = widget.item.resumePosition;
+        await ctrl.loadUrl(
+          url: url.toString(),
+          startAt: resume > const Duration(seconds: 5) ? resume : null,
+        );
+        await ctrl.play();
+        unawaited(widget.client.reportPlaybackStart(widget.item));
+        _progressTimer = Timer.periodic(
+          const Duration(seconds: 10),
+          (_) => unawaited(_reportProgress()),
+        );
         return;
       }
 
@@ -175,55 +198,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
   }
 
-  Future<void> _onNativeViewReady(NativeVideoPlayerController controller) async {
-    if (!mounted) return;
-    _nativeController = controller;
-
-    // Forward events to our broadcast streams.
-    controller.events.listen((event) {
-      if (!mounted) return;
-      switch (event) {
-        case PlaybackPositionChangedEvent(:final positionInMilliseconds):
-          _nativePosition.add(
-            Duration(milliseconds: positionInMilliseconds),
-          );
-        case PlaybackStatusChangedEvent(:final status):
-          _nativePlaying.add(status == PlaybackStatus.playing);
-        case PlaybackReadyEvent():
-          final ms = controller.videoInfo?.durationInMilliseconds ?? 0;
-          _nativeDuration.add(Duration(milliseconds: ms));
-        default:
-          break;
-      }
-    });
-
-    try {
-      final settings = _settings;
-      if (settings == null) return;
-      final url = widget.client.streamUrl(
-        widget.item,
-        settings,
-        audioStreamIndex: widget.audioStreamIndex,
-        subtitleStreamIndex: widget.subtitleStreamIndex,
-        useHls: true,
-      );
-      await controller.loadVideo(
-        VideoSource(path: url.toString(), type: VideoSourceType.network),
-      );
-      final resume = widget.item.resumePosition;
-      if (resume > const Duration(seconds: 5)) {
-        await controller.seekTo(resume);
-      }
-      await controller.play();
-      unawaited(widget.client.reportPlaybackStart(widget.item));
-      _progressTimer = Timer.periodic(
-        const Duration(seconds: 10),
-        (_) => unawaited(_reportProgress()),
-      );
-    } catch (error) {
-      if (mounted) setState(() => _error = friendlyError(error));
-    }
-  }
 
   Future<void> _applyMpvSettings(AppSettings settings) async {
     final player = _player;
@@ -405,9 +379,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     unawaited(_reportStopped());
     _nativeController?.dispose();
-    _nativePosition.close();
-    _nativeDuration.close();
-    _nativePlaying.close();
     unawaited(_player?.dispose());
     if (_isFullscreen) {
       unawaited(windowManager.setFullScreen(false));
@@ -417,12 +388,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   Duration get _currentPosition =>
       _useNativePlayer
-          ? (_nativeController?.playbackPosition ?? Duration.zero)
+          ? (_nativeController?.currentPosition ?? Duration.zero)
           : (_player?.state.position ?? Duration.zero);
 
   bool get _currentlyPlaying =>
       _useNativePlayer
-          ? (_nativeController?.playbackStatus == PlaybackStatus.playing)
+          ? (_nativeController?.activityState == PlayerActivityState.playing)
           : (_player?.state.playing ?? false);
 
   Future<void> _reportProgress() async {
@@ -462,8 +433,11 @@ class _PlayerScreenState extends State<PlayerScreen> {
       videoSurface = ErrorPane(message: _error!, dark: true);
       playerReady = false;
     } else if (_useNativePlayer) {
-      videoSurface = NativeVideoPlayerView(onViewReady: _onNativeViewReady);
-      playerReady = _nativeController != null;
+      final nc = _nativeController;
+      videoSurface = nc != null
+          ? NativeVideoPlayer(controller: nc)
+          : const CircularProgressIndicator();
+      playerReady = nc != null;
     } else if (controller == null || settings == null) {
       videoSurface = const CircularProgressIndicator();
       playerReady = false;
@@ -479,17 +453,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final PlayerBottomChrome? bottomChrome;
     if (playerReady) {
       if (_useNativePlayer) {
+        final nc = _nativeController!;
         bottomChrome = PlayerBottomChrome(
-          positionStream: _nativePosition.stream,
-          durationStream: _nativeDuration.stream,
-          playingStream: _nativePlaying.stream,
-          onSeek: (pos) => unawaited(_nativeController!.seekTo(pos)),
-          onPlayPause: () async {
-            final nc = _nativeController!;
-            if (await nc.isPlaying()) {
-              await nc.pause();
+          positionStream: nc.positionStream,
+          durationStream: nc.durationStream,
+          playingStream: nc.playerStateStream.map(
+            (s) => s == PlayerActivityState.playing,
+          ),
+          onSeek: (pos) => unawaited(nc.seekTo(pos)),
+          onPlayPause: () {
+            if (nc.activityState == PlayerActivityState.playing) {
+              unawaited(nc.pause());
             } else {
-              await nc.play();
+              unawaited(nc.play());
             }
           },
           item: widget.item,
