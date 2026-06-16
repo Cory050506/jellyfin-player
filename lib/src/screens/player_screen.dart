@@ -19,8 +19,16 @@ class PlayerScreen extends StatefulWidget {
 }
 
 class _PlayerScreenState extends State<PlayerScreen> {
+  // media_kit backend (non-iOS)
   Player? _player;
   VideoController? _controller;
+
+  // native_video_player backend (iOS)
+  NativeVideoPlayerController? _nativeController;
+  final _nativePosition = StreamController<Duration>.broadcast();
+  final _nativeDuration = StreamController<Duration>.broadcast();
+  final _nativePlaying = StreamController<bool>.broadcast();
+
   AppSettings? _settings;
   String? _error;
   Timer? _progressTimer;
@@ -29,6 +37,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
   bool _controlsVisible = true;
   Timer? _hideControlsTimer;
   final FocusNode _focusNode = FocusNode();
+
+  bool get _useNativePlayer =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
   @override
   void initState() {
@@ -94,6 +105,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Future<void> _initialize() async {
     try {
       final settings = await AppSettingsStore.load();
+      if (!mounted) return;
+      setState(() => _settings = settings);
+
+      if (_useNativePlayer) {
+        // iOS: NativeVideoPlayerView will call _onNativeViewReady once ready.
+        return;
+      }
+
+      // Non-iOS: media_kit / mpv backend.
       final player = Player(
         configuration: PlayerConfiguration(
           title: 'Jellyfin Player',
@@ -107,7 +127,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
         return;
       }
       setState(() {
-        _settings = settings;
         _player = player;
         _controller = controller;
       });
@@ -138,6 +157,55 @@ class _PlayerScreenState extends State<PlayerScreen> {
       if (mounted) {
         setState(() => _error = friendlyError(error));
       }
+    }
+  }
+
+  Future<void> _onNativeViewReady(NativeVideoPlayerController controller) async {
+    if (!mounted) return;
+    _nativeController = controller;
+
+    // Forward events to our broadcast streams.
+    controller.events.listen((event) {
+      if (!mounted) return;
+      switch (event) {
+        case PlaybackPositionChangedEvent(:final positionInMilliseconds):
+          _nativePosition.add(
+            Duration(milliseconds: positionInMilliseconds),
+          );
+        case PlaybackStatusChangedEvent(:final status):
+          _nativePlaying.add(status == PlaybackStatus.playing);
+        case PlaybackReadyEvent():
+          final ms = controller.videoInfo?.durationInMilliseconds ?? 0;
+          _nativeDuration.add(Duration(milliseconds: ms));
+        default:
+          break;
+      }
+    });
+
+    try {
+      final settings = _settings;
+      if (settings == null) return;
+      final url = widget.client.streamUrl(
+        widget.item,
+        settings,
+        audioStreamIndex: widget.audioStreamIndex,
+        subtitleStreamIndex: widget.subtitleStreamIndex,
+      );
+      await controller.loadVideo(
+        VideoSource(path: url.toString(), type: VideoSourceType.network),
+      );
+      final resume = widget.item.resumePosition;
+      if (resume > const Duration(seconds: 5)) {
+        await controller.seekTo(resume);
+      }
+      await controller.play();
+      unawaited(widget.client.reportPlaybackStart(widget.item));
+      _progressTimer = Timer.periodic(
+        const Duration(seconds: 10),
+        (_) => unawaited(_reportProgress()),
+      );
+    } catch (error) {
+      if (mounted) setState(() => _error = friendlyError(error));
     }
   }
 
@@ -320,6 +388,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _focusNode.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     unawaited(_reportStopped());
+    _nativeController?.dispose();
+    _nativePosition.close();
+    _nativeDuration.close();
+    _nativePlaying.close();
     unawaited(_player?.dispose());
     if (_isFullscreen) {
       unawaited(windowManager.setFullScreen(false));
@@ -327,39 +399,39 @@ class _PlayerScreenState extends State<PlayerScreen> {
     super.dispose();
   }
 
+  Duration get _currentPosition =>
+      _useNativePlayer
+          ? (_nativeController?.playbackPosition ?? Duration.zero)
+          : (_player?.state.position ?? Duration.zero);
+
+  bool get _currentlyPlaying =>
+      _useNativePlayer
+          ? (_nativeController?.playbackStatus == PlaybackStatus.playing)
+          : (_player?.state.playing ?? false);
+
   Future<void> _reportProgress() async {
-    final player = _player;
-    if (player == null) {
-      return;
-    }
+    if (_useNativePlayer && _nativeController == null) return;
+    if (!_useNativePlayer && _player == null) return;
     try {
       await widget.client.reportPlaybackProgress(
         widget.item,
-        position: player.state.position,
-        paused: !player.state.playing,
+        position: _currentPosition,
+        paused: !_currentlyPlaying,
       );
-    } catch (_) {
-      // Playback reporting should never interrupt local playback.
-    }
+    } catch (_) {}
   }
 
   Future<void> _reportStopped() async {
-    if (_reportedStopped) {
-      return;
-    }
+    if (_reportedStopped) return;
     _reportedStopped = true;
-    final player = _player;
-    if (player == null) {
-      return;
-    }
+    if (_useNativePlayer && _nativeController == null) return;
+    if (!_useNativePlayer && _player == null) return;
     try {
       await widget.client.reportPlaybackStopped(
         widget.item,
-        position: player.state.position,
+        position: _currentPosition,
       );
-    } catch (_) {
-      // Best effort; the next periodic progress report may already be enough.
-    }
+    } catch (_) {}
   }
 
   @override
@@ -367,6 +439,59 @@ class _PlayerScreenState extends State<PlayerScreen> {
     final player = _player;
     final controller = _controller;
     final settings = _settings;
+
+    final Widget videoSurface;
+    final bool playerReady;
+    if (_error != null) {
+      videoSurface = ErrorPane(message: _error!, dark: true);
+      playerReady = false;
+    } else if (_useNativePlayer) {
+      videoSurface = NativeVideoPlayerView(onViewReady: _onNativeViewReady);
+      playerReady = _nativeController != null;
+    } else if (controller == null || settings == null) {
+      videoSurface = const CircularProgressIndicator();
+      playerReady = false;
+    } else {
+      videoSurface = Video(
+        controller: controller,
+        fit: settings.boxFit,
+        controls: NoVideoControls,
+      );
+      playerReady = player != null;
+    }
+
+    final PlayerBottomChrome? bottomChrome;
+    if (playerReady) {
+      if (_useNativePlayer) {
+        bottomChrome = PlayerBottomChrome(
+          positionStream: _nativePosition.stream,
+          durationStream: _nativeDuration.stream,
+          playingStream: _nativePlaying.stream,
+          onSeek: (pos) => unawaited(_nativeController!.seekTo(pos)),
+          onPlayPause: () async {
+            final nc = _nativeController!;
+            if (await nc.isPlaying()) {
+              await nc.pause();
+            } else {
+              await nc.play();
+            }
+          },
+          item: widget.item,
+        );
+      } else {
+        bottomChrome = PlayerBottomChrome(
+          positionStream: player!.stream.position,
+          durationStream: player.stream.duration,
+          playingStream: player.stream.playing,
+          onSeek: (pos) => unawaited(player.seek(pos)),
+          onPlayPause: () => unawaited(player.playOrPause()),
+          item: widget.item,
+        );
+      }
+    } else {
+      bottomChrome = null;
+    }
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: KeyboardListener(
@@ -378,17 +503,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Center(
-                child: _error != null
-                    ? ErrorPane(message: _error!, dark: true)
-                    : controller == null || settings == null
-                    ? const CircularProgressIndicator()
-                    : Video(
-                        controller: controller,
-                        fit: settings.boxFit,
-                        controls: NoVideoControls,
-                      ),
-              ),
+              Center(child: videoSurface),
               Positioned(
                 top: 0,
                 left: 0,
@@ -408,12 +523,12 @@ class _PlayerScreenState extends State<PlayerScreen> {
                             Navigator.of(context).pop();
                           }
                         },
-                        onAudio: player == null
-                            ? null
-                            : () => _showAudioTracks(player),
-                        onSubtitles: player == null
-                            ? null
-                            : () => _showSubtitleTracks(player),
+                        onAudio: (!_useNativePlayer && player != null)
+                            ? () => _showAudioTracks(player)
+                            : null,
+                        onSubtitles: (!_useNativePlayer && player != null)
+                            ? () => _showSubtitleTracks(player)
+                            : null,
                         isFullscreen: _isFullscreen,
                         onFullscreen: isDesktopPlatform
                             ? _toggleFullscreen
@@ -423,7 +538,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                   ),
                 ),
               ),
-              if (player != null)
+              if (bottomChrome != null)
                 Positioned(
                   left: 0,
                   right: 0,
@@ -435,10 +550,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       ignoring: !_controlsVisible,
                       child: Listener(
                         onPointerDown: (_) => _showControls(),
-                        child: PlayerBottomChrome(
-                          player: player,
-                          item: widget.item,
-                        ),
+                        child: bottomChrome,
                       ),
                     ),
                   ),
@@ -677,11 +789,19 @@ class PlayerTopChrome extends StatelessWidget {
 class PlayerBottomChrome extends StatelessWidget {
   const PlayerBottomChrome({
     super.key,
-    required this.player,
+    required this.positionStream,
+    required this.durationStream,
+    required this.playingStream,
+    required this.onSeek,
+    required this.onPlayPause,
     required this.item,
   });
 
-  final Player player;
+  final Stream<Duration> positionStream;
+  final Stream<Duration> durationStream;
+  final Stream<bool> playingStream;
+  final void Function(Duration) onSeek;
+  final VoidCallback onPlayPause;
   final JellyfinItem item;
 
   @override
@@ -699,12 +819,10 @@ class PlayerBottomChrome extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 46, 20, 18),
           child: StreamBuilder<Duration>(
-            stream: player.stream.position,
-            initialData: player.state.position,
+            stream: positionStream,
             builder: (context, positionSnapshot) {
               return StreamBuilder<Duration>(
-                stream: player.stream.duration,
-                initialData: player.state.duration,
+                stream: durationStream,
                 builder: (context, durationSnapshot) {
                   final position = positionSnapshot.data ?? Duration.zero;
                   final duration = durationSnapshot.data ?? Duration.zero;
@@ -724,26 +842,22 @@ class PlayerBottomChrome extends StatelessWidget {
                             onPressed: () {
                               final target =
                                   position - const Duration(seconds: 10);
-                              unawaited(
-                                player.seek(
-                                  target < Duration.zero
-                                      ? Duration.zero
-                                      : target,
-                                ),
+                              onSeek(
+                                target < Duration.zero
+                                    ? Duration.zero
+                                    : target,
                               );
                             },
                             icon: const Icon(Icons.replay_10_rounded),
                           ),
                           const SizedBox(width: 8),
                           StreamBuilder<bool>(
-                            stream: player.stream.playing,
-                            initialData: player.state.playing,
+                            stream: playingStream,
                             builder: (context, snapshot) {
                               final playing = snapshot.data ?? false;
                               return IconButton.filled(
                                 tooltip: playing ? 'Pause' : 'Play',
-                                onPressed: () =>
-                                    unawaited(player.playOrPause()),
+                                onPressed: onPlayPause,
                                 icon: Icon(
                                   playing
                                       ? Icons.pause_rounded
@@ -758,11 +872,7 @@ class PlayerBottomChrome extends StatelessWidget {
                             onPressed: () {
                               final target =
                                   position + const Duration(seconds: 30);
-                              unawaited(
-                                player.seek(
-                                  target > duration ? duration : target,
-                                ),
-                              );
+                              onSeek(target > duration ? duration : target);
                             },
                             icon: const Icon(Icons.forward_30_rounded),
                           ),
@@ -802,9 +912,8 @@ class PlayerBottomChrome extends StatelessWidget {
                         min: 0,
                         max: max,
                         value: value,
-                        onChanged: (next) => unawaited(
-                          player.seek(Duration(milliseconds: next.round())),
-                        ),
+                        onChanged: (next) =>
+                            onSeek(Duration(milliseconds: next.round())),
                       ),
                     ],
                   );

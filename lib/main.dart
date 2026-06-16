@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:native_video_player/native_video_player.dart';
 import 'package:window_manager/window_manager.dart';
 
 part 'src/app.dart';

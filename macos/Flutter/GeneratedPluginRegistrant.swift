@@ -7,6 +7,7 @@ import Foundation
 
 import media_kit_libs_macos_video
 import media_kit_video
+import native_video_player
 import package_info_plus
 import screen_retriever_macos
 import shared_preferences_foundation
@@ -16,6 +17,7 @@ import window_manager
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   MediaKitLibsMacosVideoPlugin.register(with: registry.registrar(forPlugin: "MediaKitLibsMacosVideoPlugin"))
   MediaKitVideoPlugin.register(with: registry.registrar(forPlugin: "MediaKitVideoPlugin"))
+  NativeVideoPlayerPlugin.register(with: registry.registrar(forPlugin: "NativeVideoPlayerPlugin"))
   FPPPackageInfoPlusPlugin.register(with: registry.registrar(forPlugin: "FPPPackageInfoPlusPlugin"))
   ScreenRetrieverMacosPlugin.register(with: registry.registrar(forPlugin: "ScreenRetrieverMacosPlugin"))
   SharedPreferencesPlugin.register(with: registry.registrar(forPlugin: "SharedPreferencesPlugin"))
