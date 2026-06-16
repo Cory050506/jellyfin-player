@@ -461,8 +461,27 @@ class DetailBackdrop extends StatelessWidget {
                         const SizedBox(height: 22),
                         FilledButton.icon(
                           icon: const Icon(Icons.play_arrow_rounded),
-                          label: const Text('Play'),
+                          label: Text(
+                            item.playbackPositionTicks > 0
+                                ? 'Resume from ${formatDuration(item.resumePosition)}'
+                                : 'Play',
+                          ),
                           onPressed: onPlay,
+                        ),
+                      ],
+                      if (item.playbackPositionTicks > 0 &&
+                          item.runTimeTicks != null &&
+                          item.runTimeTicks! > 0) ...[
+                        const SizedBox(height: 14),
+                        LinearProgressIndicator(
+                          value: (item.playbackPositionTicks /
+                                  item.runTimeTicks!)
+                              .clamp(0.0, 1.0),
+                          minHeight: 4,
+                          backgroundColor: Colors.white24,
+                          valueColor: const AlwaysStoppedAnimation(
+                            AppColors.cyan,
+                          ),
                         ),
                       ],
                     ],

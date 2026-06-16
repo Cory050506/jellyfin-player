@@ -90,6 +90,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     client: _client,
                     library: _selectedLibrary,
                     itemsFuture: _itemsFuture,
+                    onRefresh: () {
+                      final lib = _selectedLibrary;
+                      if (lib != null) {
+                        setState(
+                          () => _itemsFuture = _client.getItems(lib),
+                        );
+                      }
+                    },
                   ),
                 ),
               ],

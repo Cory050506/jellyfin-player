@@ -6,11 +6,13 @@ class ItemsView extends StatelessWidget {
     required this.client,
     required this.library,
     required this.itemsFuture,
+    this.onRefresh,
   });
 
   final JellyfinClient client;
   final JellyfinLibrary? library;
   final Future<List<JellyfinItem>>? itemsFuture;
+  final VoidCallback? onRefresh;
 
   @override
   Widget build(BuildContext context) {
@@ -58,21 +60,27 @@ class ItemsView extends StatelessWidget {
                           if (!context.mounted) {
                             return;
                           }
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  PlayerScreen(client: client, item: playable),
-                            ),
-                          );
+                          Navigator.of(context)
+                              .push(
+                                MaterialPageRoute(
+                                  builder: (_) => PlayerScreen(
+                                    client: client,
+                                    item: playable,
+                                  ),
+                                ),
+                              )
+                              .then((_) => onRefresh?.call());
                         }
                       : null,
                   onOpen: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            ItemScreen(client: client, item: featured),
-                      ),
-                    );
+                    Navigator.of(context)
+                        .push(
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                ItemScreen(client: client, item: featured),
+                          ),
+                        )
+                        .then((_) => onRefresh?.call());
                   },
                 ),
               ),
@@ -113,12 +121,14 @@ class ItemsView extends StatelessWidget {
                     item: item,
                     imageUrl: client.imageUrl(item),
                     onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              ItemScreen(client: client, item: item),
-                        ),
-                      );
+                      Navigator.of(context)
+                          .push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  ItemScreen(client: client, item: item),
+                            ),
+                          )
+                          .then((_) => onRefresh?.call());
                     },
                   );
                 },
