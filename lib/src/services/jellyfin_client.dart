@@ -243,6 +243,14 @@ class JellyfinClient {
         'AudioCodec': 'aac,mp3,ac3,eac3,alac',
       },
     ],
+    'DirectStreamProfiles': [
+      {
+        'Type': 'Video',
+        'Container': 'mkv,avi,mov,mp4,m4v,ts,flv,webm',
+        'VideoCodec': 'h264,hevc,av1,vp9',
+        'AudioCodec': 'aac,mp3,ac3,eac3,flac,alac,opus,vorbis',
+      },
+    ],
     'TranscodingProfiles': [
       {
         'Type': 'Video',
@@ -284,6 +292,7 @@ class JellyfinClient {
         'DeviceProfile': _iosDeviceProfile,
         'UserId': userId,
         'MediaSourceId': item.id,
+        'MaxStreamingBitrate': 120000000,
         'AllowVideoStreamCopy': true,
         'AllowAudioStreamCopy': true,
         if (audioStreamIndex != null) 'AudioStreamIndex': audioStreamIndex,
