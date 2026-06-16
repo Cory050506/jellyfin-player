@@ -245,6 +245,24 @@ class _MediaTileState extends State<MediaTile> {
                               ),
                             ),
                           ),
+                          if (widget.item.playbackPositionTicks > 0 &&
+                              widget.item.runTimeTicks != null &&
+                              widget.item.runTimeTicks! > 0)
+                            Positioned(
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              child: LinearProgressIndicator(
+                                value: (widget.item.playbackPositionTicks /
+                                        widget.item.runTimeTicks!)
+                                    .clamp(0.0, 1.0),
+                                minHeight: 3,
+                                backgroundColor: Colors.white24,
+                                valueColor: const AlwaysStoppedAnimation(
+                                  AppColors.cyan,
+                                ),
+                              ),
+                            ),
                           Positioned(
                             left: 8,
                             bottom: 8,

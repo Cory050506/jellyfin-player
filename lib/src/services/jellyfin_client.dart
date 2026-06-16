@@ -176,6 +176,7 @@ class JellyfinClient {
   Future<void> reportPlaybackStart(JellyfinItem item) async {
     await _postPlayback('/Sessions/Playing', {
       'ItemId': item.id,
+      'MediaSourceId': item.id,
       'CanSeek': true,
       'PlayMethod': 'DirectStream',
     });
@@ -188,6 +189,7 @@ class JellyfinClient {
   }) async {
     await _postPlayback('/Sessions/Playing/Progress', {
       'ItemId': item.id,
+      'MediaSourceId': item.id,
       'PositionTicks': durationToTicks(position),
       'IsPaused': paused,
       'IsMuted': false,
@@ -201,7 +203,9 @@ class JellyfinClient {
   }) async {
     await _postPlayback('/Sessions/Playing/Stopped', {
       'ItemId': item.id,
+      'MediaSourceId': item.id,
       'PositionTicks': durationToTicks(position),
+      'PlayMethod': 'DirectStream',
     });
   }
 
