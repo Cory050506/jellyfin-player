@@ -178,13 +178,17 @@ class JellyfinClient {
           'SubtitleStreamIndex': '$subtitleStreamIndex',
       });
     }
-    return _uri('/Videos/${item.id}/stream', {
+    final uri = _uri('/Videos/${item.id}/stream', {
       if (settings.directStream) 'static': 'true',
+      'MediaSourceId': item.id,
       'api_key': session!.accessToken,
       if (audioStreamIndex != null) 'AudioStreamIndex': '$audioStreamIndex',
       if (subtitleStreamIndex != null)
         'SubtitleStreamIndex': '$subtitleStreamIndex',
     });
+    // ignore: avoid_print
+    print('[streamUrl] $uri');
+    return uri;
   }
 
   Future<void> reportPlaybackStart(JellyfinItem item) async {
