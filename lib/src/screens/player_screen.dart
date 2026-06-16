@@ -137,6 +137,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
           settings,
           audioStreamIndex: widget.audioStreamIndex,
           subtitleStreamIndex: widget.subtitleStreamIndex,
+          useHls: true,
         );
         final resume = widget.item.resumePosition;
         await ctrl.loadUrl(
