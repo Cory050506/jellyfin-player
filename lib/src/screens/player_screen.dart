@@ -132,16 +132,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
         if (!mounted) return;
         await ctrl.initialize();
         if (!mounted) return;
-        final url = widget.client.streamUrl(
+        final streamUrl = await widget.client.resolveStreamUrl(
           widget.item,
-          settings,
           audioStreamIndex: widget.audioStreamIndex,
           subtitleStreamIndex: widget.subtitleStreamIndex,
-          useHls: true,
         );
+        if (!mounted) return;
         final resume = widget.item.resumePosition;
         await ctrl.loadUrl(
-          url: url.toString(),
+          url: streamUrl,
           startAt: resume > const Duration(seconds: 5) ? resume : null,
         );
         await ctrl.play();

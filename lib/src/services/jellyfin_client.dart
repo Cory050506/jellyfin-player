@@ -166,16 +166,15 @@ class JellyfinClient {
     bool useHls = false,
   }) {
     if (useHls) {
-      // HLS remux: Jellyfin wraps the video/audio in MPEG-TS segments without
-      // transcoding. VideoBitrate must be set or Jellyfin omits the video track.
       final uri = _uri('/Videos/${item.id}/master.m3u8', {
         'api_key': session!.accessToken,
         'MediaSourceId': item.id,
         'VideoCodec': 'h264,hevc,av1',
         'AudioCodec': 'aac,mp3,ac3,eac3,flac,opus',
+        'AllowVideoStreamCopy': 'true',
+        'AllowAudioStreamCopy': 'true',
         'VideoBitrate': '80000000',
         'AudioBitrate': '384000',
-        'VideoStreamIndex': '0',
         if (audioStreamIndex != null) 'AudioStreamIndex': '$audioStreamIndex',
         if (subtitleStreamIndex != null)
           'SubtitleStreamIndex': '$subtitleStreamIndex',
@@ -231,6 +230,77 @@ class JellyfinClient {
       'PositionTicks': durationToTicks(position),
       'PlayMethod': 'DirectStream',
     });
+  }
+
+  // Device profile for iOS/AVPlayer: direct play MP4/MOV, remux everything
+  // else to HLS-TS. Jellyfin picks the right method and hands back the URL.
+  static const _iosDeviceProfile = {
+    'DirectPlayProfiles': [
+      {
+        'Type': 'Video',
+        'Container': 'mp4,mov,m4v',
+        'VideoCodec': 'h264,hevc,av1',
+        'AudioCodec': 'aac,mp3,ac3,eac3,alac',
+      },
+    ],
+    'TranscodingProfiles': [
+      {
+        'Type': 'Video',
+        'Container': 'ts',
+        'Protocol': 'hls',
+        'VideoCodec': 'hevc,h264',
+        'AudioCodec': 'aac,mp3,ac3,eac3',
+        'Context': 'Streaming',
+        'CopyTimestamps': true,
+        'EnableSubtitlesInManifest': false,
+      },
+    ],
+    'ContainerProfiles': <Map<String, dynamic>>[],
+    'CodecProfiles': <Map<String, dynamic>>[],
+    'SubtitleProfiles': [
+      {'Format': 'vtt', 'Method': 'External'},
+      {'Format': 'ass', 'Method': 'External'},
+    ],
+  };
+
+  Future<String> resolveStreamUrl(
+    JellyfinItem item, {
+    int? audioStreamIndex,
+    int? subtitleStreamIndex,
+  }) async {
+    final userId = session!.userId;
+    final response = await http.post(
+      _uri('/Items/${item.id}/PlaybackInfo', {
+        'UserId': userId,
+        'MediaSourceId': item.id,
+      }),
+      headers: _headers,
+      body: jsonEncode({
+        'DeviceProfile': _iosDeviceProfile,
+        'UserId': userId,
+        'MediaSourceId': item.id,
+        'AllowVideoStreamCopy': true,
+        'AllowAudioStreamCopy': true,
+        if (audioStreamIndex != null) 'AudioStreamIndex': audioStreamIndex,
+        if (subtitleStreamIndex != null)
+          'SubtitleStreamIndex': subtitleStreamIndex,
+      }),
+    );
+    final body = decodeResponse(response);
+    final sources = body['MediaSources'] as List<dynamic>? ?? [];
+    if (sources.isEmpty) throw Exception('No media sources returned');
+    final source = sources.first as Map<String, dynamic>;
+
+    // Prefer direct stream URL; fall back to transcoding URL.
+    final directUrl = source['DirectStreamUrl'] as String?;
+    final transcodingUrl = source['TranscodingUrl'] as String?;
+    final url = directUrl ?? transcodingUrl;
+    if (url == null) throw Exception('No stream URL in PlaybackInfo response');
+
+    final resolved = url.startsWith('http') ? url : '$baseUrl$url';
+    // ignore: avoid_print
+    print('[resolveStreamUrl] $resolved');
+    return resolved;
   }
 
   Future<void> _postPlayback(String path, Map<String, Object?> body) async {
