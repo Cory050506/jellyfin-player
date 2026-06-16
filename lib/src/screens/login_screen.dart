@@ -27,6 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -64,12 +65,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       );
                     }
-                    return Row(
-                      children: [
-                        const Expanded(child: _BrandPanel()),
-                        const SizedBox(width: 24),
-                        SizedBox(width: 430, child: form),
-                      ],
+                    return SingleChildScrollView(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          const Expanded(child: _BrandPanel()),
+                          const SizedBox(width: 24),
+                          SizedBox(width: 430, child: form),
+                        ],
+                      ),
                     );
                   },
                 ),
@@ -116,9 +120,9 @@ class _BrandPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      constraints: BoxConstraints(minHeight: compact ? 0 : 520),
+      constraints: BoxConstraints(minHeight: compact ? 0 : 400),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -126,53 +130,35 @@ class _BrandPanel extends StatelessWidget {
         ),
         border: Border.all(color: Colors.white10),
       ),
-      padding: EdgeInsets.all(compact ? 22 : 34),
+      padding: EdgeInsets.all(compact ? 22 : 40),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: AppColors.cyan.withValues(alpha: 0.16),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.cyan.withValues(alpha: 0.42)),
-            ),
-            child: const Icon(
-              Icons.play_arrow_rounded,
-              size: 46,
-              color: AppColors.cyan,
+          ClipRRect(
+            borderRadius: BorderRadius.circular(18),
+            child: Image.asset(
+              'assets/icon.png',
+              width: 80,
+              height: 80,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 28),
           Text(
-            'Jellyfin Player',
+            'HQFin',
             style: Theme.of(context).textTheme.displaySmall?.copyWith(
               fontWeight: FontWeight.w800,
-              letterSpacing: 0,
+              letterSpacing: -0.5,
             ),
           ),
           const SizedBox(height: 10),
           Text(
-            'A clean player shell built around direct playback, local servers, and TV-friendly browsing.',
+            'High-quality Jellyfin playback.\nDirect streams, no compromises.',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Colors.white70,
-              height: 1.35,
+              color: Colors.white54,
+              height: 1.5,
             ),
           ),
-          if (!compact) ...[
-            const SizedBox(height: 28),
-            const Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                _FeaturePill(icon: Icons.hd_rounded, label: '4K ready'),
-                _FeaturePill(icon: Icons.tv_rounded, label: 'TV first'),
-                _FeaturePill(icon: Icons.speed_rounded, label: 'Native media'),
-              ],
-            ),
-          ],
         ],
       ),
     );
@@ -278,31 +264,3 @@ class _LoginPanel extends StatelessWidget {
   }
 }
 
-class _FeaturePill extends StatelessWidget {
-  const _FeaturePill({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.white10),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18, color: AppColors.mint),
-            const SizedBox(width: 7),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
-          ],
-        ),
-      ),
-    );
-  }
-}
