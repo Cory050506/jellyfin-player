@@ -109,6 +109,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               SettingsSection(
                 title: 'Tracks',
                 children: [
+                  _AudioLanguageTile(
+                    value: settings.preferredAudioLanguage,
+                    onChanged: (value) => _update(
+                      settings.copyWith(preferredAudioLanguage: value),
+                    ),
+                  ),
                   EnumSettingTile<DefaultSubtitleMode>(
                     icon: Icons.subtitles_rounded,
                     title: 'Subtitle default',
@@ -244,6 +250,57 @@ class EnumSettingTile<T> extends StatelessWidget {
             onChanged(value);
           }
         },
+      ),
+    );
+  }
+}
+
+class _AudioLanguageTile extends StatefulWidget {
+  const _AudioLanguageTile({required this.value, required this.onChanged});
+
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  @override
+  State<_AudioLanguageTile> createState() => _AudioLanguageTileState();
+}
+
+class _AudioLanguageTileState extends State<_AudioLanguageTile> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.value);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.spatial_audio_rounded),
+      title: const Text('Preferred audio language'),
+      subtitle: const Text(
+        'e.g. "eng", "en", "English" — overrides the file default when no track is manually chosen.',
+      ),
+      trailing: SizedBox(
+        width: 130,
+        child: TextField(
+          controller: _controller,
+          textAlign: TextAlign.center,
+          decoration: const InputDecoration(
+            hintText: 'Any',
+            isDense: true,
+            border: OutlineInputBorder(),
+          ),
+          onChanged: widget.onChanged,
+          onSubmitted: widget.onChanged,
+        ),
       ),
     );
   }

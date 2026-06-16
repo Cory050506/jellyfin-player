@@ -181,10 +181,20 @@ class _PlayerScreenState extends State<PlayerScreen> {
     AudioTrack targetAudio = AudioTrack.auto();
     final audioIndex = widget.audioStreamIndex;
     if (audioIndex != null) {
+      // Explicit track chosen on the item screen — use it.
       final position = _streamPosition(widget.item.audioStreams, audioIndex);
       final match = _audioTrackAtPosition(tracks.audio, position);
       if (match != null) {
         targetAudio = match;
+      }
+    } else {
+      // No explicit choice — try to match the preferred language setting.
+      final preferred = settings.preferredAudioLanguage.trim().toLowerCase();
+      if (preferred.isNotEmpty) {
+        final match = _audioTrackByLanguage(tracks.audio, preferred);
+        if (match != null) {
+          targetAudio = match;
+        }
       }
     }
 
@@ -259,6 +269,23 @@ class _PlayerScreenState extends State<PlayerScreen> {
   /// Returns the mpv-reported audio track at [position] among real tracks
   /// (i.e. excluding the synthetic "auto"/"no" entries), since mpv assigns
   /// track ids per-type rather than using the absolute Jellyfin stream index.
+  AudioTrack? _audioTrackByLanguage(List<AudioTrack> mpvTracks, String lang) {
+    final real = mpvTracks
+        .where((t) => t.id != 'auto' && t.id != 'no')
+        .toList();
+    for (final t in real) {
+      final trackLang = (t.language ?? '').toLowerCase();
+      final trackTitle = (t.title ?? '').toLowerCase();
+      if (trackLang == lang ||
+          trackLang.startsWith(lang) ||
+          lang.startsWith(trackLang) ||
+          trackTitle.contains(lang)) {
+        return t;
+      }
+    }
+    return null;
+  }
+
   AudioTrack? _audioTrackAtPosition(List<AudioTrack> mpvTracks, int position) {
     if (position < 0) {
       return null;

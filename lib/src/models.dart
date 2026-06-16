@@ -297,7 +297,7 @@ class AppSettings {
     required this.hardwareDecoding,
     required this.hdrMode,
     required this.subtitleMode,
-    required this.audioMode,
+    required this.preferredAudioLanguage,
     required this.subtitleOffsetMs,
     required this.playerFit,
   });
@@ -308,7 +308,7 @@ class AppSettings {
     hardwareDecoding: true,
     hdrMode: HdrMode.passthrough,
     subtitleMode: DefaultSubtitleMode.auto,
-    audioMode: DefaultAudioMode.auto,
+    preferredAudioLanguage: '',
     subtitleOffsetMs: 0,
     playerFit: PlayerFit.contain,
   );
@@ -318,7 +318,9 @@ class AppSettings {
   final bool hardwareDecoding;
   final HdrMode hdrMode;
   final DefaultSubtitleMode subtitleMode;
-  final DefaultAudioMode audioMode;
+  /// ISO 639 language code or display name, e.g. "eng", "en", "English".
+  /// Empty string means use the file's default track.
+  final String preferredAudioLanguage;
   final int subtitleOffsetMs;
   final PlayerFit playerFit;
 
@@ -339,7 +341,7 @@ class AppSettings {
     bool? hardwareDecoding,
     HdrMode? hdrMode,
     DefaultSubtitleMode? subtitleMode,
-    DefaultAudioMode? audioMode,
+    String? preferredAudioLanguage,
     int? subtitleOffsetMs,
     PlayerFit? playerFit,
   }) {
@@ -349,7 +351,8 @@ class AppSettings {
       hardwareDecoding: hardwareDecoding ?? this.hardwareDecoding,
       hdrMode: hdrMode ?? this.hdrMode,
       subtitleMode: subtitleMode ?? this.subtitleMode,
-      audioMode: audioMode ?? this.audioMode,
+      preferredAudioLanguage:
+          preferredAudioLanguage ?? this.preferredAudioLanguage,
       subtitleOffsetMs: subtitleOffsetMs ?? this.subtitleOffsetMs,
       playerFit: playerFit ?? this.playerFit,
     );
@@ -361,7 +364,7 @@ class AppSettings {
     'hardwareDecoding': hardwareDecoding,
     'hdrMode': hdrMode.name,
     'subtitleMode': subtitleMode.name,
-    'audioMode': audioMode.name,
+    'preferredAudioLanguage': preferredAudioLanguage,
     'subtitleOffsetMs': subtitleOffsetMs,
     'playerFit': playerFit.name,
   };
@@ -384,11 +387,9 @@ class AppSettings {
         json['subtitleMode'] as String?,
         defaults.subtitleMode,
       ),
-      audioMode: enumByName(
-        DefaultAudioMode.values,
-        json['audioMode'] as String?,
-        defaults.audioMode,
-      ),
+      preferredAudioLanguage:
+          json['preferredAudioLanguage'] as String? ??
+          defaults.preferredAudioLanguage,
       subtitleOffsetMs:
           json['subtitleOffsetMs'] as int? ?? defaults.subtitleOffsetMs,
       playerFit: enumByName(
@@ -403,7 +404,5 @@ class AppSettings {
 enum HdrMode { passthrough, toneMap, off }
 
 enum DefaultSubtitleMode { auto, off }
-
-enum DefaultAudioMode { auto }
 
 enum PlayerFit { contain, cover, fill }
