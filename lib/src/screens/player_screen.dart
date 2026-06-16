@@ -496,7 +496,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Center(child: videoSurface),
+              Positioned.fill(child: videoSurface),
               // Tap anywhere to toggle play/pause; show controls briefly.
               Positioned.fill(
                 child: GestureDetector(
