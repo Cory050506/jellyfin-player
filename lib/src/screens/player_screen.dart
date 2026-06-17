@@ -35,6 +35,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Timer? _hideControlsTimer;
   final FocusNode _focusNode = FocusNode();
   StreamSubscription<bool>? _fullscreenSubscription;
+  bool _wasInFullscreen = false;
 
   bool get _useNativePlayer =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
@@ -139,7 +140,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
         setState(() => _nativeController = ctrl);
         // Listen for when user exits fullscreen via native UI (swipe down/back button)
         _fullscreenSubscription = ctrl.isFullscreenStream.listen((isFullscreen) {
-          if (!isFullscreen && mounted) {
+          _wasInFullscreen = _wasInFullscreen || isFullscreen;
+          if (!isFullscreen && _wasInFullscreen && mounted) {
             // User tapped native X/back to exit fullscreen; return to item screen.
             unawaited(_reportStopped());
             if (mounted) {
