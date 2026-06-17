@@ -435,12 +435,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (!_useNativePlayer && _player == null) return;
     try {
       final pos = _currentPosition;
-      debugPrint('reportProgress: ${pos.inSeconds}s, paused: ${!_currentlyPlaying}');
+      final itemId = widget.item.id;
+      final ticks = (pos.inMicroseconds ~/ 10).toString();
+      debugPrint('reportProgress: $itemId at ${pos.inSeconds}s (${ticks} ticks), paused: ${!_currentlyPlaying}');
       await widget.client.reportPlaybackProgress(
         widget.item,
         position: pos,
         paused: !_currentlyPlaying,
       );
+      debugPrint('reportProgress success');
     } catch (e) {
       debugPrint('reportProgress error: $e');
     }
@@ -453,11 +456,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (!_useNativePlayer && _player == null) return;
     try {
       final pos = _currentPosition;
-      debugPrint('reportStopped: ${pos.inSeconds}s');
+      final itemId = widget.item.id;
+      final ticks = (pos.inMicroseconds ~/ 10).toString();
+      debugPrint('reportStopped: $itemId at ${pos.inSeconds}s ($ticks ticks)');
       await widget.client.reportPlaybackStopped(
         widget.item,
         position: pos,
       );
+      debugPrint('reportStopped success');
     } catch (e) {
       debugPrint('reportStopped error: $e');
     }
