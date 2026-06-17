@@ -44,6 +44,8 @@ dependencies:
   better_native_video_player: ^1.1.0
   wakelock_plus: ^1.2.8
   cupertino_native: ^0.1.1
+  fluent_ui: ^4.15.1
+  macos_ui: ^2.2.2
 
 dev_dependencies:
   flutter_test:

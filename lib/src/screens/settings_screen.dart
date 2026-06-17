@@ -210,12 +210,14 @@ class SettingsSection extends StatelessWidget {
   }
 }
 
-/// True on iOS, where cupertino_native can host real UIKit controls.
-bool get _useNativeControls =>
-    !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+// Per-platform native design systems: Cupertino on iOS, Fluent on Windows,
+// macOS controls on macOS, Material 3 everywhere else (Android/web/Linux).
+bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+bool get _isWindows =>
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
+bool get _isMacOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.macOS;
 
-/// A settings row with a toggle: native UIKit switch on iOS, Material
-/// [SwitchListTile] everywhere else.
+/// A settings row with a toggle, rendered with each platform's native switch.
 class SettingSwitchTile extends StatelessWidget {
   const SettingSwitchTile({
     super.key,
@@ -234,27 +236,44 @@ class SettingSwitchTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (_useNativeControls) {
-      return ListTile(
-        leading: Icon(icon),
+    // Android (and any other Material platform) keeps the native Material 3
+    // SwitchListTile.
+    if (!_isIOS && !_isWindows && !_isMacOS) {
+      return SwitchListTile(
+        value: value,
+        onChanged: onChanged,
+        secondary: Icon(icon),
         title: Text(title),
         subtitle: Text(subtitle),
-        trailing: CNSwitch(value: value, onChanged: onChanged),
-        onTap: () => onChanged(!value),
       );
     }
-    return SwitchListTile(
-      value: value,
-      onChanged: onChanged,
-      secondary: Icon(icon),
+
+    final Widget control;
+    if (_isIOS) {
+      control = CNSwitch(value: value, onChanged: onChanged);
+    } else if (_isWindows) {
+      control = fluent.FluentTheme(
+        data: fluent.FluentThemeData.dark(),
+        child: fluent.ToggleSwitch(checked: value, onChanged: onChanged),
+      );
+    } else {
+      control = macos.MacosTheme(
+        data: macos.MacosThemeData.dark(),
+        child: macos.MacosSwitch(value: value, onChanged: onChanged),
+      );
+    }
+
+    return ListTile(
+      leading: Icon(icon),
       title: Text(title),
       subtitle: Text(subtitle),
+      trailing: control,
+      onTap: () => onChanged(!value),
     );
   }
 }
 
-/// A slider that uses the native UIKit slider on iOS, Material [Slider]
-/// elsewhere.
+/// A slider rendered with each platform's native slider control.
 class NativeSlider extends StatelessWidget {
   const NativeSlider({
     super.key,
@@ -275,20 +294,49 @@ class NativeSlider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (_useNativeControls) {
+    final clamped = value.clamp(min, max);
+    final divisions = ((max - min) / step).round();
+
+    if (_isIOS) {
       return CNSlider(
-        value: value.clamp(min, max),
+        value: clamped,
         min: min,
         max: max,
         step: step,
         onChanged: onChanged,
       );
     }
+    if (_isWindows) {
+      return fluent.FluentTheme(
+        data: fluent.FluentThemeData.dark(),
+        child: fluent.Slider(
+          value: clamped,
+          min: min,
+          max: max,
+          divisions: divisions,
+          label: label,
+          onChanged: onChanged,
+        ),
+      );
+    }
+    if (_isMacOS) {
+      return macos.MacosTheme(
+        data: macos.MacosThemeData.dark(),
+        child: macos.MacosSlider(
+          value: clamped,
+          min: min,
+          max: max,
+          discrete: true,
+          splits: divisions,
+          onChanged: onChanged,
+        ),
+      );
+    }
     return Slider(
       min: min,
       max: max,
-      divisions: ((max - min) / step).round(),
-      value: value.clamp(min, max),
+      divisions: divisions,
+      value: clamped,
       label: label,
       onChanged: onChanged,
     );
