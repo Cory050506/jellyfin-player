@@ -209,31 +209,25 @@ class _LoginPanel extends StatelessWidget {
                 style: TextStyle(color: Colors.white60),
               ),
               const SizedBox(height: 24),
-              TextField(
+              AdaptiveTextField(
                 controller: serverController,
-                decoration: const InputDecoration(
-                  labelText: 'Server URL',
-                  prefixIcon: Icon(Icons.dns_rounded),
-                ),
+                placeholder: 'Server URL',
+                icon: Icons.dns_rounded,
                 keyboardType: TextInputType.url,
                 textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: 12),
-              TextField(
+              AdaptiveTextField(
                 controller: usernameController,
-                decoration: const InputDecoration(
-                  labelText: 'Username',
-                  prefixIcon: Icon(Icons.person_rounded),
-                ),
+                placeholder: 'Username',
+                icon: Icons.person_rounded,
                 textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: 12),
-              TextField(
+              AdaptiveTextField(
                 controller: passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  prefixIcon: Icon(Icons.lock_rounded),
-                ),
+                placeholder: 'Password',
+                icon: Icons.lock_rounded,
                 obscureText: true,
                 onSubmitted: (_) => onSignIn(),
               ),
@@ -245,16 +239,10 @@ class _LoginPanel extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 20),
-              FilledButton.icon(
+              AdaptiveButton(
+                label: busy ? 'Connecting…' : 'Connect',
+                icon: Icons.login_rounded,
                 onPressed: busy ? null : onSignIn,
-                icon: busy
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.login_rounded),
-                label: const Text('Connect'),
               ),
             ],
           ),

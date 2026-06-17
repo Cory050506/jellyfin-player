@@ -157,9 +157,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: const Icon(Icons.restore_rounded),
                     title: const Text('Reset settings'),
                     subtitle: const Text('Restore the high-bitrate defaults.'),
-                    trailing: OutlinedButton(
+                    trailing: AdaptiveButton(
+                      label: 'Reset',
+                      filled: false,
                       onPressed: _reset,
-                      child: const Text('Reset'),
                     ),
                   ),
                 ],
@@ -210,139 +211,6 @@ class SettingsSection extends StatelessWidget {
   }
 }
 
-// Per-platform native design systems: Cupertino on iOS, Fluent on Windows,
-// macOS controls on macOS, Material 3 everywhere else (Android/web/Linux).
-bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-bool get _isWindows =>
-    !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
-bool get _isMacOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.macOS;
-
-/// A settings row with a toggle, rendered with each platform's native switch.
-class SettingSwitchTile extends StatelessWidget {
-  const SettingSwitchTile({
-    super.key,
-    required this.value,
-    required this.onChanged,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-  });
-
-  final bool value;
-  final ValueChanged<bool> onChanged;
-  final IconData icon;
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    // Android (and any other Material platform) keeps the native Material 3
-    // SwitchListTile.
-    if (!_isIOS && !_isWindows && !_isMacOS) {
-      return SwitchListTile(
-        value: value,
-        onChanged: onChanged,
-        secondary: Icon(icon),
-        title: Text(title),
-        subtitle: Text(subtitle),
-      );
-    }
-
-    final Widget control;
-    if (_isIOS) {
-      control = CNSwitch(value: value, onChanged: onChanged);
-    } else if (_isWindows) {
-      control = fluent.FluentTheme(
-        data: fluent.FluentThemeData.dark(),
-        child: fluent.ToggleSwitch(checked: value, onChanged: onChanged),
-      );
-    } else {
-      control = macos.MacosTheme(
-        data: macos.MacosThemeData.dark(),
-        child: macos.MacosSwitch(value: value, onChanged: onChanged),
-      );
-    }
-
-    return ListTile(
-      leading: Icon(icon),
-      title: Text(title),
-      subtitle: Text(subtitle),
-      trailing: control,
-      onTap: () => onChanged(!value),
-    );
-  }
-}
-
-/// A slider rendered with each platform's native slider control.
-class NativeSlider extends StatelessWidget {
-  const NativeSlider({
-    super.key,
-    required this.value,
-    required this.onChanged,
-    required this.min,
-    required this.max,
-    required this.step,
-    required this.label,
-  });
-
-  final double value;
-  final ValueChanged<double> onChanged;
-  final double min;
-  final double max;
-  final double step;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final clamped = value.clamp(min, max);
-    final divisions = ((max - min) / step).round();
-
-    if (_isIOS) {
-      return CNSlider(
-        value: clamped,
-        min: min,
-        max: max,
-        step: step,
-        onChanged: onChanged,
-      );
-    }
-    if (_isWindows) {
-      return fluent.FluentTheme(
-        data: fluent.FluentThemeData.dark(),
-        child: fluent.Slider(
-          value: clamped,
-          min: min,
-          max: max,
-          divisions: divisions,
-          label: label,
-          onChanged: onChanged,
-        ),
-      );
-    }
-    if (_isMacOS) {
-      return macos.MacosTheme(
-        data: macos.MacosThemeData.dark(),
-        child: macos.MacosSlider(
-          value: clamped,
-          min: min,
-          max: max,
-          discrete: true,
-          splits: divisions,
-          onChanged: onChanged,
-        ),
-      );
-    }
-    return Slider(
-      min: min,
-      max: max,
-      divisions: divisions,
-      value: clamped,
-      label: label,
-      onChanged: onChanged,
-    );
-  }
-}
-
 class EnumSettingTile<T> extends StatelessWidget {
   const EnumSettingTile({
     super.key,
@@ -369,17 +237,11 @@ class EnumSettingTile<T> extends StatelessWidget {
       leading: Icon(icon),
       title: Text(title),
       subtitle: Text(subtitle),
-      trailing: DropdownButton<T>(
+      trailing: AdaptiveDropdown<T>(
         value: value,
-        items: [
-          for (final item in values)
-            DropdownMenuItem(value: item, child: Text(label(item))),
-        ],
-        onChanged: (value) {
-          if (value != null) {
-            onChanged(value);
-          }
-        },
+        values: values,
+        label: label,
+        onChanged: onChanged,
       ),
     );
   }
@@ -420,14 +282,10 @@ class _AudioLanguageTileState extends State<_AudioLanguageTile> {
       ),
       trailing: SizedBox(
         width: 130,
-        child: TextField(
+        child: AdaptiveTextField(
           controller: _controller,
+          placeholder: 'Any',
           textAlign: TextAlign.center,
-          decoration: const InputDecoration(
-            hintText: 'Any',
-            isDense: true,
-            border: OutlineInputBorder(),
-          ),
           onChanged: widget.onChanged,
           onSubmitted: widget.onChanged,
         ),

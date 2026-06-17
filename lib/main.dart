@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart' as cupertino;
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:media_kit/media_kit.dart';
@@ -20,6 +21,7 @@ part 'src/models.dart';
 part 'src/services/app_settings_store.dart';
 part 'src/services/jellyfin_client.dart';
 part 'src/utils.dart';
+part 'src/widgets/adaptive_controls.dart';
 part 'src/widgets/media_artwork.dart';
 part 'src/widgets/status_panes.dart';
 part 'src/screens/session_gate.dart';

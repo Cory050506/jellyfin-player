@@ -297,9 +297,8 @@ class JellyfinClient {
         'MaxStreamingBitrate': 120000000,
         'AllowVideoStreamCopy': true,
         'AllowAudioStreamCopy': true,
-        if (audioStreamIndex != null) 'AudioStreamIndex': audioStreamIndex,
-        if (subtitleStreamIndex != null)
-          'SubtitleStreamIndex': subtitleStreamIndex,
+        'AudioStreamIndex': ?audioStreamIndex,
+        'SubtitleStreamIndex': ?subtitleStreamIndex,
       }),
     );
     final body = decodeResponse(response);
