@@ -126,22 +126,29 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   Future<void> _initialize() async {
     try {
+      debugPrint('PlayerScreen._initialize() start');
       final settings = await AppSettingsStore.load();
+      debugPrint('PlayerScreen._initialize() settings loaded');
       if (!mounted) return;
       setState(() => _settings = settings);
 
       if (_useNativePlayer) {
+        debugPrint('PlayerScreen._initialize() creating native controller');
         final ctrl = NativeVideoPlayerController(
           id: 0,
           showNativeControls: true,
           allowsPictureInPicture: true,
           canStartPictureInPictureAutomatically: false,
         );
+        debugPrint('PlayerScreen._initialize() setting native controller');
         setState(() => _nativeController = ctrl);
         // Listen for when user exits fullscreen via native UI (swipe down/back button)
+        debugPrint('PlayerScreen._initialize() subscribing to fullscreen stream');
         _fullscreenSubscription = ctrl.isFullscreenStream.listen((isFullscreen) {
+          debugPrint('PlayerScreen fullscreen state changed: $isFullscreen');
           _wasInFullscreen = _wasInFullscreen || isFullscreen;
           if (!isFullscreen && _wasInFullscreen && mounted) {
+            debugPrint('PlayerScreen exiting fullscreen, popping screen');
             // User tapped native X/back to exit fullscreen; return to item screen.
             unawaited(_reportStopped());
             if (mounted) {
@@ -150,29 +157,37 @@ class _PlayerScreenState extends State<PlayerScreen> {
           }
         });
         // Give the widget one frame to attach the platform view before loading.
+        debugPrint('PlayerScreen waiting for platform view attachment');
         await Future<void>.delayed(const Duration(milliseconds: 100));
         if (!mounted) return;
+        debugPrint('PlayerScreen initializing controller');
         await ctrl.initialize();
         if (!mounted) return;
+        debugPrint('PlayerScreen resolving stream URL');
         final streamUrl = await widget.client.resolveStreamUrl(
           widget.item,
           audioStreamIndex: widget.audioStreamIndex,
           subtitleStreamIndex: widget.subtitleStreamIndex,
         );
+        debugPrint('PlayerScreen loading URL: $streamUrl');
         if (!mounted) return;
         final resume = widget.item.resumePosition;
         await ctrl.loadUrl(
           url: streamUrl,
           startAt: resume > const Duration(seconds: 5) ? resume : null,
         );
+        debugPrint('PlayerScreen playing');
         await ctrl.play();
         // Auto-enter native fullscreen on iOS for Liquid Glass controls.
+        debugPrint('PlayerScreen entering fullscreen');
         await ctrl.enterFullScreen();
+        debugPrint('PlayerScreen reporting playback start');
         unawaited(widget.client.reportPlaybackStart(widget.item));
         _progressTimer = Timer.periodic(
           const Duration(seconds: 10),
           (_) => unawaited(_reportProgress()),
         );
+        debugPrint('PlayerScreen iOS initialization complete');
         return;
       }
 
@@ -217,6 +232,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
         (_) => unawaited(_reportProgress()),
       );
     } catch (error) {
+      debugPrint('PlayerScreen._initialize() error: $error');
       if (mounted) {
         setState(() => _error = friendlyError(error));
       }
