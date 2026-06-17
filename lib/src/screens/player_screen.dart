@@ -548,10 +548,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
                               Navigator.of(context).pop();
                             }
                           },
-                          onAudio: player != null
+                          onAudio: _useNativePlayer
+                              ? () => _showNativeAudioTracks()
+                              : player != null
                               ? () => _showAudioTracks(player)
                               : null,
-                          onSubtitles: player != null
+                          onSubtitles: _useNativePlayer
+                              ? () => _showNativeSubtitleTracks()
+                              : player != null
                               ? () => _showSubtitleTracks(player)
                               : null,
                           isFullscreen: _isFullscreen,
@@ -655,6 +659,48 @@ class _PlayerScreenState extends State<PlayerScreen> {
             );
           },
         ),
+      ),
+    );
+  }
+
+  Future<void> _showNativeAudioTracks() async {
+    final nc = _nativeController;
+    if (nc == null) return;
+    final tracks = await nc.getAvailableAudioTracks();
+    if (!mounted || tracks.isEmpty) return;
+    if (!context.mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.panel,
+      builder: (context) => NativeAudioTrackSheet(
+        tracks: tracks,
+        onSelected: (track) async {
+          await nc.setAudioTrack(track);
+          if (context.mounted) {
+            Navigator.of(context).pop();
+          }
+        },
+      ),
+    );
+  }
+
+  Future<void> _showNativeSubtitleTracks() async {
+    final nc = _nativeController;
+    if (nc == null) return;
+    final tracks = await nc.getAvailableSubtitleTracks();
+    if (!mounted || tracks.isEmpty) return;
+    if (!context.mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.panel,
+      builder: (context) => NativeSubtitleTrackSheet(
+        tracks: tracks,
+        onSelected: (track) async {
+          await nc.setSubtitleTrack(track);
+          if (context.mounted) {
+            Navigator.of(context).pop();
+          }
+        },
       ),
     );
   }
@@ -955,6 +1001,168 @@ class PlayerBottomChrome extends StatelessWidget {
               );
             },
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class NativeAudioTrackSheet extends StatelessWidget {
+  const NativeAudioTrackSheet({
+    super.key,
+    required this.tracks,
+    required this.onSelected,
+  });
+
+  final List<NativeVideoPlayerAudioTrack> tracks;
+  final Future<void> Function(NativeVideoPlayerAudioTrack) onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Audio',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: tracks.length,
+                itemBuilder: (context, index) {
+                  final track = tracks[index];
+                  return Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => unawaited(onSelected(track)),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Row(
+                          children: [
+                            if (track.isSelected)
+                              const Padding(
+                                padding: EdgeInsets.only(right: 12),
+                                child: Icon(
+                                  Icons.check_rounded,
+                                  color: AppColors.cyan,
+                                ),
+                              )
+                            else
+                              const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(track.displayName),
+                                  if (track.language.isNotEmpty)
+                                    Text(
+                                      track.language,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.white54,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class NativeSubtitleTrackSheet extends StatelessWidget {
+  const NativeSubtitleTrackSheet({
+    super.key,
+    required this.tracks,
+    required this.onSelected,
+  });
+
+  final List<NativeVideoPlayerSubtitleTrack> tracks;
+  final Future<void> Function(NativeVideoPlayerSubtitleTrack) onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Subtitles',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: tracks.length,
+                itemBuilder: (context, index) {
+                  final track = tracks[index];
+                  return Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => unawaited(onSelected(track)),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Row(
+                          children: [
+                            if (track.isSelected)
+                              const Padding(
+                                padding: EdgeInsets.only(right: 12),
+                                child: Icon(
+                                  Icons.check_rounded,
+                                  color: AppColors.cyan,
+                                ),
+                              )
+                            else
+                              const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(track.displayName),
+                                  if (track.language.isNotEmpty)
+                                    Text(
+                                      track.language,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.white54,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
