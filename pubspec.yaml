@@ -43,6 +43,7 @@ dependencies:
   window_manager: ^0.4.3
   better_native_video_player: ^1.1.0
   wakelock_plus: ^1.2.8
+  cupertino_native: ^0.1.1
 
 dev_dependencies:
   flutter_test:

@@ -53,35 +53,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
               SettingsSection(
                 title: 'Playback',
                 children: [
-                  SwitchListTile(
+                  SettingSwitchTile(
                     value: settings.directStream,
                     onChanged: (value) =>
                         _update(settings.copyWith(directStream: value)),
-                    secondary: const Icon(Icons.route_rounded),
-                    title: const Text('Prefer direct stream'),
-                    subtitle: const Text(
-                      'Keeps Jellyfin out of the browser/transcode path when possible.',
-                    ),
+                    icon: Icons.route_rounded,
+                    title: 'Prefer direct stream',
+                    subtitle:
+                        'Keeps Jellyfin out of the browser/transcode path when possible.',
                   ),
-                  SwitchListTile(
+                  SettingSwitchTile(
                     value: settings.highBitrateCache,
                     onChanged: (value) =>
                         _update(settings.copyWith(highBitrateCache: value)),
-                    secondary: const Icon(Icons.memory_rounded),
-                    title: const Text('Large cache for 4K files'),
-                    subtitle: Text(
-                      '${settings.bufferSizeBytes ~/ 1024 ~/ 1024} MB mpv demuxer cache.',
-                    ),
+                    icon: Icons.memory_rounded,
+                    title: 'Large cache for 4K files',
+                    subtitle:
+                        '${settings.bufferSizeBytes ~/ 1024 ~/ 1024} MB mpv demuxer cache.',
                   ),
-                  SwitchListTile(
+                  SettingSwitchTile(
                     value: settings.hardwareDecoding,
                     onChanged: (value) =>
                         _update(settings.copyWith(hardwareDecoding: value)),
-                    secondary: const Icon(Icons.developer_board_rounded),
-                    title: const Text('Prefer hardware decoding'),
-                    subtitle: const Text(
-                      'Best for high-bitrate 4K and Android TV devices.',
-                    ),
+                    icon: Icons.developer_board_rounded,
+                    title: 'Prefer hardware decoding',
+                    subtitle:
+                        'Best for high-bitrate 4K and Android TV devices.',
                   ),
                   EnumSettingTile<HdrMode>(
                     icon: Icons.hdr_on_rounded,
@@ -131,10 +128,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: Text('${settings.subtitleOffsetMs} ms'),
                     trailing: SizedBox(
                       width: 190,
-                      child: Slider(
+                      child: NativeSlider(
                         min: -5000,
                         max: 5000,
-                        divisions: 40,
+                        step: 250,
                         value: settings.subtitleOffsetMs.toDouble(),
                         label: '${settings.subtitleOffsetMs} ms',
                         onChanged: (value) => _update(
@@ -209,6 +206,91 @@ class SettingsSection extends StatelessWidget {
           ...children,
         ],
       ),
+    );
+  }
+}
+
+/// True on iOS, where cupertino_native can host real UIKit controls.
+bool get _useNativeControls =>
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
+/// A settings row with a toggle: native UIKit switch on iOS, Material
+/// [SwitchListTile] everywhere else.
+class SettingSwitchTile extends StatelessWidget {
+  const SettingSwitchTile({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_useNativeControls) {
+      return ListTile(
+        leading: Icon(icon),
+        title: Text(title),
+        subtitle: Text(subtitle),
+        trailing: CNSwitch(value: value, onChanged: onChanged),
+        onTap: () => onChanged(!value),
+      );
+    }
+    return SwitchListTile(
+      value: value,
+      onChanged: onChanged,
+      secondary: Icon(icon),
+      title: Text(title),
+      subtitle: Text(subtitle),
+    );
+  }
+}
+
+/// A slider that uses the native UIKit slider on iOS, Material [Slider]
+/// elsewhere.
+class NativeSlider extends StatelessWidget {
+  const NativeSlider({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    required this.min,
+    required this.max,
+    required this.step,
+    required this.label,
+  });
+
+  final double value;
+  final ValueChanged<double> onChanged;
+  final double min;
+  final double max;
+  final double step;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    if (_useNativeControls) {
+      return CNSlider(
+        value: value.clamp(min, max),
+        min: min,
+        max: max,
+        step: step,
+        onChanged: onChanged,
+      );
+    }
+    return Slider(
+      min: min,
+      max: max,
+      divisions: ((max - min) / step).round(),
+      value: value.clamp(min, max),
+      label: label,
+      onChanged: onChanged,
     );
   }
 }
