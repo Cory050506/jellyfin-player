@@ -39,7 +39,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(
+        title: const Text('Settings'),
+        // Shift the back button clear of the floating macOS traffic lights.
+        leadingWidth: _isMacOS ? 116 : null,
+        leading: _isMacOS
+            ? const Padding(
+                padding: EdgeInsets.only(left: 70),
+                child: BackButton(),
+              )
+            : null,
+      ),
       body: FutureBuilder<AppSettings>(
         future: _settingsFuture,
         builder: (context, snapshot) {

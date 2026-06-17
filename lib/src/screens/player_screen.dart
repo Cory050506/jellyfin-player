@@ -483,21 +483,40 @@ class _PlayerScreenState extends State<PlayerScreen> {
               // our own tap detector and chrome (they'd swallow the touches).
               // We keep only a lightweight back button to leave the player.
               if (_useNativePlayer) ...[
+                // Tapping the top-left corner re-reveals the back button after
+                // it auto-hides; the rest of the surface stays free for the
+                // native AVPlayer controls.
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: _showControls,
+                    child: const SizedBox(width: 160, height: 120),
+                  ),
+                ),
                 Positioned(
                   top: 0,
                   left: 0,
                   child: SafeArea(
                     child: Padding(
                       padding: const EdgeInsets.all(8),
-                      child: IconButton.filledTonal(
-                        tooltip: 'Back',
-                        onPressed: () async {
-                          await _reportStopped();
-                          if (context.mounted) {
-                            Navigator.of(context).pop();
-                          }
-                        },
-                        icon: const Icon(Icons.arrow_back_rounded),
+                      child: AnimatedOpacity(
+                        opacity: _controlsVisible ? 1 : 0,
+                        duration: const Duration(milliseconds: 200),
+                        child: IgnorePointer(
+                          ignoring: !_controlsVisible,
+                          child: IconButton.filledTonal(
+                            tooltip: 'Back',
+                            onPressed: () async {
+                              await _reportStopped();
+                              if (context.mounted) {
+                                Navigator.of(context).pop();
+                              }
+                            },
+                            icon: const Icon(Icons.arrow_back_rounded),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -729,7 +748,13 @@ class PlayerTopChrome extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 42),
+          // Clear the floating macOS traffic-light buttons (windowed only).
+          padding: EdgeInsets.fromLTRB(
+            _isMacOS && !isFullscreen ? 78 : 12,
+            8,
+            12,
+            42,
+          ),
           child: Row(
             children: [
               IconButton.filledTonal(
