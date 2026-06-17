@@ -31,7 +31,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _bootstrap() async {
     _settings = await AppSettingsStore.load();
     if (!mounted) return;
-    setState(() => _librariesFuture = _loadLibraries());
+    setState(() {
+      _librariesFuture = _loadLibraries();
+    });
   }
 
   /// Applies the user's order and hidden set to the raw server list.
@@ -129,8 +131,9 @@ class _HomeScreenState extends State<HomeScreen> {
           if (snapshot.hasError) {
             return ErrorPane(
               message: friendlyError(snapshot.error),
-              onRetry: () =>
-                  setState(() => _librariesFuture = _loadLibraries()),
+              onRetry: () => setState(() {
+                _librariesFuture = _loadLibraries();
+              }),
             );
           }
           final all = snapshot.data ?? [];
@@ -287,15 +290,18 @@ class MediaSidebar extends StatelessWidget {
                     padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
                     child: Row(
                       children: [
-                        const Text(
-                          'Libraries',
-                          style: TextStyle(
-                            color: Colors.white54,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
+                        const Expanded(
+                          child: Text(
+                            'Libraries',
+                            style: TextStyle(
+                              color: Colors.white54,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const Spacer(),
                         InkWell(
                           borderRadius: BorderRadius.circular(6),
                           onTap: onEditLibraries,

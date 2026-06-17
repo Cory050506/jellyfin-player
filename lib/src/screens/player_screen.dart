@@ -72,6 +72,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
   }
 
+  Future<void> _nativeFullscreen() async {
+    final nc = _nativeController;
+    if (nc != null) {
+      await nc.enterFullScreen();
+    }
+  }
+
   Future<void> _onVideoTap() async {
     if (_useNativePlayer) {
       final nc = _nativeController;
@@ -555,7 +562,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
                               ? () => _showSubtitleTracks(player)
                               : null,
                           isFullscreen: _isFullscreen,
-                          onFullscreen: isDesktopPlatform
+                          onFullscreen: _useNativePlayer
+                              ? _nativeFullscreen
+                              : isDesktopPlatform
                               ? _toggleFullscreen
                               : null,
                         ),
