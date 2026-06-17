@@ -492,7 +492,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
               // our own tap detector and chrome (they'd swallow the touches).
               // We keep only a lightweight back button to leave the player.
               if (_useNativePlayer) ...[
-                // Always-visible back button to exit native fullscreen.
+                // Always-visible button to exit native fullscreen.
                 Positioned(
                   top: 0,
                   left: 0,
@@ -500,16 +500,9 @@ class _PlayerScreenState extends State<PlayerScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(8),
                       child: IconButton.filledTonal(
-                        tooltip: 'Back',
-                        onPressed: () async {
-                          await _nativeController?.exitFullScreen();
-                          if (!context.mounted) return;
-                          await _reportStopped();
-                          if (context.mounted) {
-                            Navigator.of(context).pop();
-                          }
-                        },
-                        icon: const Icon(Icons.arrow_back_rounded),
+                        tooltip: 'Exit fullscreen',
+                        onPressed: () => unawaited(_nativeController?.exitFullScreen()),
+                        icon: const Icon(Icons.close_rounded),
                       ),
                     ),
                   ),
