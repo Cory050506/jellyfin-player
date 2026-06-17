@@ -1,4 +1,6 @@
 PODS:
+  - cupertino_native (0.0.1):
+    - FlutterMacOS
   - FlutterMacOS (1.0.0)
   - media_kit_libs_macos_video (1.0.4):
     - FlutterMacOS
@@ -8,12 +10,15 @@ PODS:
     - FlutterMacOS
 
 DEPENDENCIES:
+  - cupertino_native (from `Flutter/ephemeral/.symlinks/plugins/cupertino_native/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
   - media_kit_libs_macos_video (from `Flutter/ephemeral/.symlinks/plugins/media_kit_libs_macos_video/macos`)
   - media_kit_video (from `Flutter/ephemeral/.symlinks/plugins/media_kit_video/macos`)
   - window_manager (from `Flutter/ephemeral/.symlinks/plugins/window_manager/macos`)
 
 EXTERNAL SOURCES:
+  cupertino_native:
+    :path: Flutter/ephemeral/.symlinks/plugins/cupertino_native/macos
   FlutterMacOS:
     :path: Flutter/ephemeral
   media_kit_libs_macos_video:
@@ -24,11 +29,12 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/window_manager/macos
 
 SPEC CHECKSUMS:
+  cupertino_native: 69ee8a8bac1c467f04256be9d78899a180287d9a
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
   media_kit_libs_macos_video: 85a23e549b5f480e72cae3e5634b5514bc692f65
   media_kit_video: fa6564e3799a0a28bff39442334817088b7ca758
   window_manager: 1d01fa7ac65a6e6f83b965471b1a7fdd3f06166c
 
-PODFILE CHECKSUM: d1046917bf5c4e4a07178eff20bafb0cda9227a3
+PODFILE CHECKSUM: c52fe7ffa013893eaa62fddd8de0c527b5bf99e8
 
 COCOAPODS: 1.16.2

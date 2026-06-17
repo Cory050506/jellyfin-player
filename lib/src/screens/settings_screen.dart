@@ -160,6 +160,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     trailing: AdaptiveButton(
                       label: 'Reset',
                       filled: false,
+                      shrinkWrap: true,
                       onPressed: _reset,
                     ),
                   ),

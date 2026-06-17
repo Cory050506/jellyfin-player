@@ -164,6 +164,7 @@ class AdaptiveDropdown<T> extends StatelessWidget {
     if (_isIOS) {
       return CNPopupMenuButton(
         buttonLabel: label(value),
+        shrinkWrap: true,
         items: [
           for (final v in values) CNPopupMenuItem(label: label(v)),
         ],
@@ -219,6 +220,7 @@ class AdaptiveButton extends StatelessWidget {
     required this.onPressed,
     this.icon,
     this.filled = true,
+    this.shrinkWrap = false,
   });
 
   final String label;
@@ -226,12 +228,17 @@ class AdaptiveButton extends StatelessWidget {
   final IconData? icon;
   final bool filled;
 
+  /// When true the button sizes to its content (for tight slots like a
+  /// ListTile trailing); when false it can fill the available width.
+  final bool shrinkWrap;
+
   @override
   Widget build(BuildContext context) {
     if (_isIOS) {
       return CNButton(
         label: label,
         onPressed: onPressed,
+        shrinkWrap: shrinkWrap,
         style: filled ? CNButtonStyle.filled : CNButtonStyle.plain,
       );
     }
