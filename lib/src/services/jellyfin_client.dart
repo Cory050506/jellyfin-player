@@ -254,12 +254,14 @@ class JellyfinClient {
     'TranscodingProfiles': [
       {
         'Type': 'Video',
-        'Container': 'ts',
+        // fMP4 segments: Apple's HLS spec requires HEVC to be in fragmented
+        // MP4, NOT MPEG-TS. TS segments give audio-only on AVPlayer for HEVC.
+        'Container': 'mp4',
         'Protocol': 'hls',
         'VideoCodec': 'hevc,h264',
         'AudioCodec': 'aac,mp3,ac3,eac3',
         'Context': 'Streaming',
-        'CopyTimestamps': true,
+        'CopyTimestamps': false,
         'EnableSubtitlesInManifest': false,
         'MaxAudioChannels': '8',
         'MinSegments': 1,

@@ -125,6 +125,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
           id: 0,
           showNativeControls: false,
           allowsPictureInPicture: true,
+          canStartPictureInPictureAutomatically: false,
         );
         setState(() => _nativeController = ctrl);
         // Give the widget one frame to attach the platform view before loading.
