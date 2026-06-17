@@ -154,7 +154,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
           id: 0,
           showNativeControls: true,
           allowsPictureInPicture: true,
-          canStartPictureInPictureAutomatically: false,
+          canStartPictureInPictureAutomatically: true,
         );
         setState(() => _nativeController = ctrl);
         // Listen for when user exits fullscreen via native UI (swipe down/back button)
