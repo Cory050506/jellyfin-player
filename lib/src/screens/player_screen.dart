@@ -34,8 +34,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
   bool _controlsVisible = true;
   Timer? _hideControlsTimer;
   final FocusNode _focusNode = FocusNode();
-  StreamSubscription<bool>? _fullscreenSubscription;
-  bool _wasInFullscreen = false;
 
   bool get _useNativePlayer =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
@@ -157,17 +155,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
           canStartPictureInPictureAutomatically: true,
         );
         setState(() => _nativeController = ctrl);
-        // Listen for when user exits fullscreen via native UI (swipe down/back button)
-        _fullscreenSubscription = ctrl.isFullscreenStream.listen((isFullscreen) {
-          _wasInFullscreen = _wasInFullscreen || isFullscreen;
-          if (!isFullscreen && _wasInFullscreen && mounted) {
-            // User tapped native X/back to exit fullscreen; return to item screen.
-            unawaited(_reportStopped());
-            if (mounted) {
-              Navigator.of(context).pop();
-            }
-          }
-        });
         // Give the widget one frame to attach the platform view before loading.
         await Future<void>.delayed(const Duration(milliseconds: 100));
         if (!mounted) return;
@@ -419,7 +406,6 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void dispose() {
     _progressTimer?.cancel();
     _hideControlsTimer?.cancel();
-    _fullscreenSubscription?.cancel();
     _focusNode.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     unawaited(WakelockPlus.disable());
