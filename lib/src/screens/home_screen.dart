@@ -67,7 +67,10 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }
           return SafeArea(
-            child: Row(
+            child: Padding(
+              // Clear the floating macOS traffic-light buttons.
+              padding: EdgeInsets.only(top: _isMacOS ? 28 : 0),
+              child: Row(
               children: [
                 MediaSidebar(
                   username: widget.session.username,
@@ -101,6 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ],
+              ),
             ),
           );
         },
