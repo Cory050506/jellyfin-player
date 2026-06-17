@@ -41,57 +41,15 @@ class ItemsView extends StatelessWidget {
             subtitle: 'Nothing was returned from this library.',
           );
         }
-        final featured = items.first;
         return CustomScrollView(
           slivers: [
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 24, 10),
-              sliver: SliverToBoxAdapter(
-                child: LibraryHero(
-                  library: library!,
-                  item: featured,
-                  backdropUrl: client.backdropUrl(featured, width: 1400),
-                  posterUrl: client.imageUrl(featured, width: 360),
-                  onPlay: featured.isPlayable
-                      ? () async {
-                          final playable = featured.mediaStreams.isEmpty
-                              ? await client.getItemDetails(featured.id)
-                              : featured;
-                          if (!context.mounted) {
-                            return;
-                          }
-                          Navigator.of(context)
-                              .push(
-                                MaterialPageRoute(
-                                  builder: (_) => PlayerScreen(
-                                    client: client,
-                                    item: playable,
-                                  ),
-                                ),
-                              )
-                              .then((_) => onRefresh?.call());
-                        }
-                      : null,
-                  onOpen: () {
-                    Navigator.of(context)
-                        .push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                ItemScreen(client: client, item: featured),
-                          ),
-                        )
-                        .then((_) => onRefresh?.call());
-                  },
-                ),
-              ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+              padding: EdgeInsets.fromLTRB(24, _isMacOS ? 36 : 16, 24, 8),
               sliver: SliverToBoxAdapter(
                 child: Row(
                   children: [
                     Text(
-                      'All media',
+                      library!.name,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),

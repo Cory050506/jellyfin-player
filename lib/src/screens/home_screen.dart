@@ -16,21 +16,48 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final JellyfinClient _client = JellyfinClient(session: widget.session);
-  late Future<List<JellyfinLibrary>> _librariesFuture;
+  Future<List<JellyfinLibrary>>? _librariesFuture;
+  List<JellyfinLibrary> _allLibraries = const [];
   JellyfinLibrary? _selectedLibrary;
   Future<List<JellyfinItem>>? _itemsFuture;
+  AppSettings _settings = AppSettings.defaults;
 
   @override
   void initState() {
     super.initState();
-    _librariesFuture = _loadLibraries();
+    _bootstrap();
+  }
+
+  Future<void> _bootstrap() async {
+    _settings = await AppSettingsStore.load();
+    if (!mounted) return;
+    setState(() => _librariesFuture = _loadLibraries());
+  }
+
+  /// Applies the user's order and hidden set to the raw server list.
+  List<JellyfinLibrary> _visible(List<JellyfinLibrary> all) {
+    final hidden = _settings.hiddenLibraries.toSet();
+    final byId = {for (final l in all) l.id: l};
+    final result = <JellyfinLibrary>[];
+    for (final id in _settings.libraryOrder) {
+      final lib = byId[id];
+      if (lib != null && !hidden.contains(id)) result.add(lib);
+    }
+    for (final l in all) {
+      if (!_settings.libraryOrder.contains(l.id) && !hidden.contains(l.id)) {
+        result.add(l);
+      }
+    }
+    return result;
   }
 
   Future<List<JellyfinLibrary>> _loadLibraries() async {
     final libraries = await _client.getLibraries();
-    if (libraries.isNotEmpty) {
-      _selectedLibrary = libraries.first;
-      _itemsFuture = _client.getItems(libraries.first);
+    _allLibraries = libraries;
+    final visible = _visible(libraries);
+    if (visible.isNotEmpty) {
+      _selectedLibrary = visible.first;
+      _itemsFuture = _client.getItems(visible.first);
     }
     return libraries;
   }
@@ -42,13 +69,61 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<void> _saveSettings(AppSettings next) async {
+    setState(() => _settings = next);
+    await AppSettingsStore.save(next);
+  }
+
+  void _toggleCollapsed() {
+    _saveSettings(
+      _settings.copyWith(sidebarCollapsed: !_settings.sidebarCollapsed),
+    );
+  }
+
+  Future<void> _editLibraries() async {
+    final result = await showModalBottomSheet<({List<String> order, List<String> hidden})>(
+      context: context,
+      backgroundColor: AppColors.panel,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => LibraryEditorSheet(
+        libraries: _visible(_allLibraries) +
+            _allLibraries
+                .where((l) => _settings.hiddenLibraries.contains(l.id))
+                .toList(),
+        hidden: _settings.hiddenLibraries,
+      ),
+    );
+    if (result == null) return;
+    await _saveSettings(
+      _settings.copyWith(
+        libraryOrder: result.order,
+        hiddenLibraries: result.hidden,
+      ),
+    );
+    // If the selected library was hidden, fall back to the first visible one.
+    final visible = _visible(_allLibraries);
+    if (_selectedLibrary == null ||
+        !visible.any((l) => l.id == _selectedLibrary!.id)) {
+      if (visible.isNotEmpty) {
+        _selectLibrary(visible.first);
+      } else {
+        setState(() {
+          _selectedLibrary = null;
+          _itemsFuture = null;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: FutureBuilder<List<JellyfinLibrary>>(
         future: _librariesFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
+          if (_librariesFuture == null ||
+              snapshot.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
@@ -58,52 +133,56 @@ class _HomeScreenState extends State<HomeScreen> {
                   setState(() => _librariesFuture = _loadLibraries()),
             );
           }
-          final libraries = snapshot.data ?? [];
-          if (libraries.isEmpty) {
+          final all = snapshot.data ?? [];
+          if (all.isEmpty) {
             return const EmptyPane(
               icon: Icons.video_library_rounded,
               title: 'No libraries found',
               subtitle: 'This user does not have visible media libraries.',
             );
           }
+          final visible = _visible(all);
           return SafeArea(
             child: Padding(
               // Clear the floating macOS traffic-light buttons.
               padding: EdgeInsets.only(top: _isMacOS ? 28 : 0),
               child: Row(
-              children: [
-                MediaSidebar(
-                  username: widget.session.username,
-                  libraries: libraries,
-                  selectedLibrary: _selectedLibrary,
-                  onLibrarySelected: _selectLibrary,
-                  onRefresh: () {
-                    setState(() {
-                      if (_selectedLibrary == null) {
-                        _librariesFuture = _loadLibraries();
-                      } else {
-                        _itemsFuture = _client.getItems(_selectedLibrary!);
-                      }
-                    });
-                  },
-                  onSignedOut: widget.onSignedOut,
-                ),
-                Expanded(
-                  child: ItemsView(
-                    client: _client,
-                    library: _selectedLibrary,
-                    itemsFuture: _itemsFuture,
+                children: [
+                  MediaSidebar(
+                    username: widget.session.username,
+                    libraries: visible,
+                    selectedLibrary: _selectedLibrary,
+                    collapsed: _settings.sidebarCollapsed,
+                    onToggleCollapsed: _toggleCollapsed,
+                    onEditLibraries: _editLibraries,
+                    onLibrarySelected: _selectLibrary,
                     onRefresh: () {
-                      final lib = _selectedLibrary;
-                      if (lib != null) {
-                        setState(
-                          () => _itemsFuture = _client.getItems(lib),
-                        );
-                      }
+                      setState(() {
+                        if (_selectedLibrary == null) {
+                          _librariesFuture = _loadLibraries();
+                        } else {
+                          _itemsFuture = _client.getItems(_selectedLibrary!);
+                        }
+                      });
                     },
+                    onSignedOut: widget.onSignedOut,
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: ItemsView(
+                      client: _client,
+                      library: _selectedLibrary,
+                      itemsFuture: _itemsFuture,
+                      onRefresh: () {
+                        final lib = _selectedLibrary;
+                        if (lib != null) {
+                          setState(
+                            () => _itemsFuture = _client.getItems(lib),
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
           );
@@ -119,6 +198,9 @@ class MediaSidebar extends StatelessWidget {
     required this.username,
     required this.libraries,
     required this.selectedLibrary,
+    required this.collapsed,
+    required this.onToggleCollapsed,
+    required this.onEditLibraries,
     required this.onLibrarySelected,
     required this.onRefresh,
     required this.onSignedOut,
@@ -127,15 +209,20 @@ class MediaSidebar extends StatelessWidget {
   final String username;
   final List<JellyfinLibrary> libraries;
   final JellyfinLibrary? selectedLibrary;
+  final bool collapsed;
+  final VoidCallback onToggleCollapsed;
+  final VoidCallback onEditLibraries;
   final ValueChanged<JellyfinLibrary> onLibrarySelected;
   final VoidCallback onRefresh;
   final VoidCallback onSignedOut;
 
   @override
   Widget build(BuildContext context) {
-    final wide = MediaQuery.sizeOf(context).width >= 900;
-    return Container(
-      width: wide ? 248 : 88,
+    final expanded = !collapsed;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 160),
+      curve: Curves.easeOut,
+      width: expanded ? 248 : 88,
       margin: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.panel.withValues(alpha: 0.78),
@@ -147,7 +234,7 @@ class MediaSidebar extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(14),
             child: Row(
-              mainAxisAlignment: wide
+              mainAxisAlignment: expanded
                   ? MainAxisAlignment.start
                   : MainAxisAlignment.center,
               children: [
@@ -164,7 +251,7 @@ class MediaSidebar extends StatelessWidget {
                     size: 30,
                   ),
                 ),
-                if (wide) ...[
+                if (expanded) ...[
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -195,16 +282,33 @@ class MediaSidebar extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.all(10),
               children: [
-                if (wide)
-                  const Padding(
-                    padding: EdgeInsets.fromLTRB(8, 8, 8, 10),
-                    child: Text(
-                      'Libraries',
-                      style: TextStyle(
-                        color: Colors.white54,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                      ),
+                if (expanded)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+                    child: Row(
+                      children: [
+                        const Text(
+                          'Libraries',
+                          style: TextStyle(
+                            color: Colors.white54,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const Spacer(),
+                        InkWell(
+                          borderRadius: BorderRadius.circular(6),
+                          onTap: onEditLibraries,
+                          child: const Padding(
+                            padding: EdgeInsets.all(4),
+                            child: Icon(
+                              Icons.tune_rounded,
+                              size: 16,
+                              color: Colors.white54,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 for (final library in libraries)
@@ -212,7 +316,7 @@ class MediaSidebar extends StatelessWidget {
                     icon: iconForLibrary(library.collectionType),
                     label: library.name,
                     selected: library.id == selectedLibrary?.id,
-                    expanded: wide,
+                    expanded: expanded,
                     onPressed: () => onLibrarySelected(library),
                   ),
               ],
@@ -223,17 +327,26 @@ class MediaSidebar extends StatelessWidget {
             child: Column(
               children: [
                 SidebarButton(
+                  icon: collapsed
+                      ? Icons.chevron_right_rounded
+                      : Icons.chevron_left_rounded,
+                  label: 'Collapse',
+                  selected: false,
+                  expanded: expanded,
+                  onPressed: onToggleCollapsed,
+                ),
+                SidebarButton(
                   icon: Icons.refresh_rounded,
                   label: 'Refresh',
                   selected: false,
-                  expanded: wide,
+                  expanded: expanded,
                   onPressed: onRefresh,
                 ),
                 SidebarButton(
                   icon: Icons.settings_rounded,
                   label: 'Settings',
                   selected: false,
-                  expanded: wide,
+                  expanded: expanded,
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => const SettingsScreen()),
@@ -244,13 +357,131 @@ class MediaSidebar extends StatelessWidget {
                   icon: Icons.logout_rounded,
                   label: 'Sign out',
                   selected: false,
-                  expanded: wide,
+                  expanded: expanded,
                   onPressed: onSignedOut,
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Bottom sheet that lets the user reorder and hide/show libraries.
+class LibraryEditorSheet extends StatefulWidget {
+  const LibraryEditorSheet({
+    super.key,
+    required this.libraries,
+    required this.hidden,
+  });
+
+  final List<JellyfinLibrary> libraries;
+  final List<String> hidden;
+
+  @override
+  State<LibraryEditorSheet> createState() => _LibraryEditorSheetState();
+}
+
+class _LibraryEditorSheetState extends State<LibraryEditorSheet> {
+  late List<JellyfinLibrary> _order;
+  late Set<String> _hidden;
+
+  @override
+  void initState() {
+    super.initState();
+    _order = List.of(widget.libraries);
+    _hidden = widget.hidden.toSet();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Edit libraries',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const Spacer(),
+                AdaptiveButton(
+                  label: 'Done',
+                  shrinkWrap: true,
+                  onPressed: () => Navigator.of(context).pop((
+                    order: _order.map((l) => l.id).toList(),
+                    hidden: _hidden.toList(),
+                  )),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Drag to reorder. Tap the eye to hide a library from the sidebar.',
+              style: TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: ReorderableListView.builder(
+                shrinkWrap: true,
+                itemCount: _order.length,
+                onReorderItem: (oldIndex, newIndex) {
+                  setState(() {
+                    final item = _order.removeAt(oldIndex);
+                    _order.insert(newIndex, item);
+                  });
+                },
+                itemBuilder: (context, index) {
+                  final lib = _order[index];
+                  final hidden = _hidden.contains(lib.id);
+                  return ListTile(
+                    key: ValueKey(lib.id),
+                    leading: Icon(iconForLibrary(lib.collectionType)),
+                    title: Text(
+                      lib.name,
+                      style: TextStyle(
+                        color: hidden ? Colors.white38 : Colors.white,
+                      ),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: hidden ? 'Show' : 'Hide',
+                          icon: Icon(
+                            hidden
+                                ? Icons.visibility_off_rounded
+                                : Icons.visibility_rounded,
+                            color: hidden ? Colors.white38 : AppColors.cyan,
+                          ),
+                          onPressed: () => setState(() {
+                            if (hidden) {
+                              _hidden.remove(lib.id);
+                            } else {
+                              _hidden.add(lib.id);
+                            }
+                          }),
+                        ),
+                        const Icon(
+                          Icons.drag_handle_rounded,
+                          color: Colors.white38,
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

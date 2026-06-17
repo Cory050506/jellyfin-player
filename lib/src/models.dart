@@ -300,6 +300,9 @@ class AppSettings {
     required this.preferredAudioLanguage,
     required this.subtitleOffsetMs,
     required this.playerFit,
+    required this.sidebarCollapsed,
+    required this.libraryOrder,
+    required this.hiddenLibraries,
   });
 
   static const defaults = AppSettings(
@@ -311,6 +314,9 @@ class AppSettings {
     preferredAudioLanguage: '',
     subtitleOffsetMs: 0,
     playerFit: PlayerFit.contain,
+    sidebarCollapsed: false,
+    libraryOrder: <String>[],
+    hiddenLibraries: <String>[],
   );
 
   final bool directStream;
@@ -323,6 +329,14 @@ class AppSettings {
   final String preferredAudioLanguage;
   final int subtitleOffsetMs;
   final PlayerFit playerFit;
+
+  /// Whether the home-screen sidebar shows icons only.
+  final bool sidebarCollapsed;
+  /// Library ids in the user's preferred display order. Ids not listed fall
+  /// back to the server's order, after the listed ones.
+  final List<String> libraryOrder;
+  /// Library ids the user has chosen to hide from the sidebar.
+  final List<String> hiddenLibraries;
 
   int get bufferSizeBytes =>
       highBitrateCache ? 512 * 1024 * 1024 : 64 * 1024 * 1024;
@@ -344,6 +358,9 @@ class AppSettings {
     String? preferredAudioLanguage,
     int? subtitleOffsetMs,
     PlayerFit? playerFit,
+    bool? sidebarCollapsed,
+    List<String>? libraryOrder,
+    List<String>? hiddenLibraries,
   }) {
     return AppSettings(
       directStream: directStream ?? this.directStream,
@@ -355,6 +372,9 @@ class AppSettings {
           preferredAudioLanguage ?? this.preferredAudioLanguage,
       subtitleOffsetMs: subtitleOffsetMs ?? this.subtitleOffsetMs,
       playerFit: playerFit ?? this.playerFit,
+      sidebarCollapsed: sidebarCollapsed ?? this.sidebarCollapsed,
+      libraryOrder: libraryOrder ?? this.libraryOrder,
+      hiddenLibraries: hiddenLibraries ?? this.hiddenLibraries,
     );
   }
 
@@ -367,6 +387,9 @@ class AppSettings {
     'preferredAudioLanguage': preferredAudioLanguage,
     'subtitleOffsetMs': subtitleOffsetMs,
     'playerFit': playerFit.name,
+    'sidebarCollapsed': sidebarCollapsed,
+    'libraryOrder': libraryOrder,
+    'hiddenLibraries': hiddenLibraries,
   };
 
   static AppSettings fromJson(Map<String, dynamic> json) {
@@ -397,6 +420,14 @@ class AppSettings {
         json['playerFit'] as String?,
         defaults.playerFit,
       ),
+      sidebarCollapsed:
+          json['sidebarCollapsed'] as bool? ?? defaults.sidebarCollapsed,
+      libraryOrder:
+          (json['libraryOrder'] as List<dynamic>?)?.cast<String>() ??
+          defaults.libraryOrder,
+      hiddenLibraries:
+          (json['hiddenLibraries'] as List<dynamic>?)?.cast<String>() ??
+          defaults.hiddenLibraries,
     );
   }
 }
