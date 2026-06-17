@@ -81,6 +81,13 @@ class _PlayerScreenState extends State<PlayerScreen> {
     }
   }
 
+  Future<void> _enterPictureInPicture() async {
+    final nc = _nativeController;
+    if (nc != null) {
+      await nc.enterPictureInPicture();
+    }
+  }
+
   Future<void> _onVideoTap() async {
     if (_useNativePlayer) {
       final nc = _nativeController;
@@ -427,12 +434,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (_useNativePlayer && _nativeController == null) return;
     if (!_useNativePlayer && _player == null) return;
     try {
+      final pos = _currentPosition;
+      debugPrint('reportProgress: ${pos.inSeconds}s, paused: ${!_currentlyPlaying}');
       await widget.client.reportPlaybackProgress(
         widget.item,
-        position: _currentPosition,
+        position: pos,
         paused: !_currentlyPlaying,
       );
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('reportProgress error: $e');
+    }
   }
 
   Future<void> _reportStopped() async {
@@ -441,11 +452,15 @@ class _PlayerScreenState extends State<PlayerScreen> {
     if (_useNativePlayer && _nativeController == null) return;
     if (!_useNativePlayer && _player == null) return;
     try {
+      final pos = _currentPosition;
+      debugPrint('reportStopped: ${pos.inSeconds}s');
       await widget.client.reportPlaybackStopped(
         widget.item,
-        position: _currentPosition,
+        position: pos,
       );
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('reportStopped error: $e');
+    }
   }
 
   @override
@@ -564,6 +579,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                               : isDesktopPlatform
                               ? _toggleFullscreen
                               : null,
+                          onPiP: _useNativePlayer ? _enterPictureInPicture : null,
                         ),
                       ),
                     ),
@@ -774,6 +790,7 @@ class PlayerTopChrome extends StatelessWidget {
     required this.onSubtitles,
     required this.isFullscreen,
     required this.onFullscreen,
+    this.onPiP,
   });
 
   final JellyfinItem item;
@@ -782,6 +799,7 @@ class PlayerTopChrome extends StatelessWidget {
   final VoidCallback? onSubtitles;
   final bool isFullscreen;
   final Future<void> Function()? onFullscreen;
+  final Future<void> Function()? onPiP;
 
   @override
   Widget build(BuildContext context) {
@@ -846,6 +864,14 @@ class PlayerTopChrome extends StatelessWidget {
                 onPressed: onSubtitles,
                 icon: const Icon(Icons.subtitles_rounded),
               ),
+              if (onPiP != null) ...[
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  tooltip: 'Picture in Picture',
+                  onPressed: () => unawaited(onPiP!()),
+                  icon: const Icon(Icons.picture_in_picture_rounded),
+                ),
+              ],
               if (onFullscreen != null) ...[
                 const SizedBox(width: 8),
                 IconButton.filledTonal(
