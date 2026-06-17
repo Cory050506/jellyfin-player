@@ -83,8 +83,20 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   Future<void> _enterPictureInPicture() async {
     final nc = _nativeController;
-    if (nc != null) {
-      await nc.enterPictureInPicture();
+    if (nc == null) return;
+    try {
+      debugPrint('Checking PiP availability...');
+      final available = await nc.isPictureInPictureAvailable();
+      debugPrint('PiP available: $available');
+      if (available) {
+        debugPrint('Entering PiP...');
+        final success = await nc.enterPictureInPicture();
+        debugPrint('PiP enter result: $success');
+      } else {
+        debugPrint('PiP not available');
+      }
+    } catch (e) {
+      debugPrint('PiP error: $e');
     }
   }
 
