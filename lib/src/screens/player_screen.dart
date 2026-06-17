@@ -42,6 +42,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    unawaited(WakelockPlus.enable());
     unawaited(_initialize());
     if (isDesktopPlatform) {
       unawaited(_syncFullscreenState());
@@ -379,6 +380,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _hideControlsTimer?.cancel();
     _focusNode.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    unawaited(WakelockPlus.disable());
     unawaited(_reportStopped());
     _nativeController?.dispose();
     unawaited(_player?.dispose());
