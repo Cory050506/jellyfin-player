@@ -123,7 +123,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       if (_useNativePlayer) {
         final ctrl = NativeVideoPlayerController(
           id: 0,
-          showNativeControls: false,
+          showNativeControls: true,
           allowsPictureInPicture: true,
           canStartPictureInPictureAutomatically: false,
         );
@@ -452,39 +452,18 @@ class _PlayerScreenState extends State<PlayerScreen> {
       playerReady = player != null;
     }
 
-    final PlayerBottomChrome? bottomChrome;
-    if (playerReady) {
-      if (_useNativePlayer) {
-        final nc = _nativeController!;
-        bottomChrome = PlayerBottomChrome(
-          positionStream: nc.positionStream,
-          durationStream: nc.durationStream,
-          playingStream: nc.playerStateStream.map(
-            (s) => s == PlayerActivityState.playing,
-          ),
-          onSeek: (pos) => unawaited(nc.seekTo(pos)),
-          onPlayPause: () {
-            if (nc.activityState == PlayerActivityState.playing) {
-              unawaited(nc.pause());
-            } else {
-              unawaited(nc.play());
-            }
-          },
-          item: widget.item,
-        );
-      } else {
-        bottomChrome = PlayerBottomChrome(
-          positionStream: player!.stream.position,
-          durationStream: player.stream.duration,
-          playingStream: player.stream.playing,
-          onSeek: (pos) => unawaited(player.seek(pos)),
-          onPlayPause: () => unawaited(player.playOrPause()),
-          item: widget.item,
-        );
-      }
-    } else {
-      bottomChrome = null;
-    }
+    // iOS uses native controls; only non-iOS needs our custom bottom chrome.
+    final PlayerBottomChrome? bottomChrome =
+        (playerReady && !_useNativePlayer && player != null)
+        ? PlayerBottomChrome(
+            positionStream: player.stream.position,
+            durationStream: player.stream.duration,
+            playingStream: player.stream.playing,
+            onSeek: (pos) => unawaited(player.seek(pos)),
+            onPlayPause: () => unawaited(player.playOrPause()),
+            item: widget.item,
+          )
+        : null;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -498,52 +477,41 @@ class _PlayerScreenState extends State<PlayerScreen> {
             fit: StackFit.expand,
             children: [
               Positioned.fill(child: videoSurface),
-              // Tap anywhere to toggle play/pause; show controls briefly.
-              Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.translucent,
-                  onTap: _onVideoTap,
-                ),
-              ),
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: AnimatedOpacity(
-                  opacity: _controlsVisible ? 1 : 0,
-                  duration: const Duration(milliseconds: 200),
-                  child: IgnorePointer(
-                    ignoring: !_controlsVisible,
-                    child: Listener(
-                      onPointerDown: (_) => _showControls(),
-                      child: PlayerTopChrome(
-                        item: widget.item,
-                        onBack: () async {
+              // iOS uses the native AVPlayerViewController controls, so we skip
+              // our own tap detector and chrome (they'd swallow the touches).
+              // We keep only a lightweight back button to leave the player.
+              if (_useNativePlayer) ...[
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: IconButton.filledTonal(
+                        tooltip: 'Back',
+                        onPressed: () async {
                           await _reportStopped();
                           if (context.mounted) {
                             Navigator.of(context).pop();
                           }
                         },
-                        onAudio: (!_useNativePlayer && player != null)
-                            ? () => _showAudioTracks(player)
-                            : null,
-                        onSubtitles: (!_useNativePlayer && player != null)
-                            ? () => _showSubtitleTracks(player)
-                            : null,
-                        isFullscreen: _isFullscreen,
-                        onFullscreen: isDesktopPlatform
-                            ? _toggleFullscreen
-                            : null,
+                        icon: const Icon(Icons.arrow_back_rounded),
                       ),
                     ),
                   ),
                 ),
-              ),
-              if (bottomChrome != null)
+              ] else ...[
+                // Tap anywhere to toggle play/pause; show controls briefly.
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTap: _onVideoTap,
+                  ),
+                ),
                 Positioned(
+                  top: 0,
                   left: 0,
                   right: 0,
-                  bottom: 0,
                   child: AnimatedOpacity(
                     opacity: _controlsVisible ? 1 : 0,
                     duration: const Duration(milliseconds: 200),
@@ -551,11 +519,47 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       ignoring: !_controlsVisible,
                       child: Listener(
                         onPointerDown: (_) => _showControls(),
-                        child: bottomChrome,
+                        child: PlayerTopChrome(
+                          item: widget.item,
+                          onBack: () async {
+                            await _reportStopped();
+                            if (context.mounted) {
+                              Navigator.of(context).pop();
+                            }
+                          },
+                          onAudio: player != null
+                              ? () => _showAudioTracks(player)
+                              : null,
+                          onSubtitles: player != null
+                              ? () => _showSubtitleTracks(player)
+                              : null,
+                          isFullscreen: _isFullscreen,
+                          onFullscreen: isDesktopPlatform
+                              ? _toggleFullscreen
+                              : null,
+                        ),
                       ),
                     ),
                   ),
                 ),
+                if (bottomChrome != null)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: AnimatedOpacity(
+                      opacity: _controlsVisible ? 1 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: IgnorePointer(
+                        ignoring: !_controlsVisible,
+                        child: Listener(
+                          onPointerDown: (_) => _showControls(),
+                          child: bottomChrome,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ],
           ),
         ),
