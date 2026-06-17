@@ -153,6 +153,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
           startAt: resume > const Duration(seconds: 5) ? resume : null,
         );
         await ctrl.play();
+        // Auto-enter native fullscreen on iOS for Liquid Glass controls.
+        await ctrl.enterFullScreen();
         unawaited(widget.client.reportPlaybackStart(widget.item));
         _progressTimer = Timer.periodic(
           const Duration(seconds: 10),
@@ -490,40 +492,24 @@ class _PlayerScreenState extends State<PlayerScreen> {
               // our own tap detector and chrome (they'd swallow the touches).
               // We keep only a lightweight back button to leave the player.
               if (_useNativePlayer) ...[
-                // Tapping the top-left corner re-reveals the back button after
-                // it auto-hides; the rest of the surface stays free for the
-                // native AVPlayer controls.
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
-                    onTap: _showControls,
-                    child: const SizedBox(width: 160, height: 120),
-                  ),
-                ),
+                // Always-visible back button to exit native fullscreen.
                 Positioned(
                   top: 0,
                   left: 0,
                   child: SafeArea(
                     child: Padding(
                       padding: const EdgeInsets.all(8),
-                      child: AnimatedOpacity(
-                        opacity: _controlsVisible ? 1 : 0,
-                        duration: const Duration(milliseconds: 200),
-                        child: IgnorePointer(
-                          ignoring: !_controlsVisible,
-                          child: IconButton.filledTonal(
-                            tooltip: 'Back',
-                            onPressed: () async {
-                              await _reportStopped();
-                              if (context.mounted) {
-                                Navigator.of(context).pop();
-                              }
-                            },
-                            icon: const Icon(Icons.arrow_back_rounded),
-                          ),
-                        ),
+                      child: IconButton.filledTonal(
+                        tooltip: 'Back',
+                        onPressed: () async {
+                          await _nativeController?.exitFullScreen();
+                          if (!context.mounted) return;
+                          await _reportStopped();
+                          if (context.mounted) {
+                            Navigator.of(context).pop();
+                          }
+                        },
+                        icon: const Icon(Icons.arrow_back_rounded),
                       ),
                     ),
                   ),
