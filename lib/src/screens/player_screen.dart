@@ -171,6 +171,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
           url: streamUrl,
           startAt: resume > const Duration(seconds: 5) ? resume : null,
         );
+        // Brief delay to ensure video is ready before playing
+        await Future<void>.delayed(const Duration(milliseconds: 200));
         await ctrl.play();
         // Auto-enter native fullscreen on iOS for Liquid Glass controls.
         await ctrl.enterFullScreen();
@@ -535,6 +537,10 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       child: IconButton.filledTonal(
                         tooltip: 'Close player',
                         onPressed: () async {
+                          // Exit fullscreen first, then close
+                          try {
+                            await _nativeController?.exitFullScreen();
+                          } catch (_) {}
                           await _reportStopped();
                           if (context.mounted) {
                             Navigator.of(context).pop();
