@@ -156,13 +156,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               SettingsSection(
                 title: 'About this build',
                 children: [
-                  const ListTile(
-                    leading: Icon(Icons.info_outline_rounded),
-                    title: Text('HDR note'),
-                    subtitle: Text(
-                      'HDR passthrough still depends on the OS, display, GPU, mpv backend, and the file. Keep OS HDR enabled on Windows and use a HDR-capable TV/display.',
-                    ),
-                  ),
                   ListTile(
                     leading: const Icon(Icons.restore_rounded),
                     title: const Text('Reset settings'),
@@ -248,11 +241,18 @@ class EnumSettingTile<T> extends StatelessWidget {
       leading: Icon(icon),
       title: Text(title),
       subtitle: Text(subtitle),
-      trailing: AdaptiveDropdown<T>(
-        value: value,
-        values: values,
-        label: label,
-        onChanged: onChanged,
+      trailing: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.white24),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: AdaptiveDropdown<T>(
+          value: value,
+          values: values,
+          label: label,
+          onChanged: onChanged,
+        ),
       ),
     );
   }
