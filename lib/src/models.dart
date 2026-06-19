@@ -303,6 +303,7 @@ class AppSettings {
     required this.sidebarCollapsed,
     required this.libraryOrder,
     required this.hiddenLibraries,
+    required this.pinnedNavLibraries,
   });
 
   static const defaults = AppSettings(
@@ -317,6 +318,7 @@ class AppSettings {
     sidebarCollapsed: false,
     libraryOrder: <String>[],
     hiddenLibraries: <String>[],
+    pinnedNavLibraries: <String>[],
   );
 
   final bool directStream;
@@ -337,6 +339,8 @@ class AppSettings {
   final List<String> libraryOrder;
   /// Library ids the user has chosen to hide from the sidebar.
   final List<String> hiddenLibraries;
+  /// Library ids pinned to the iOS nav bar (max 4). Empty = auto first 4.
+  final List<String> pinnedNavLibraries;
 
   int get bufferSizeBytes =>
       highBitrateCache ? 512 * 1024 * 1024 : 64 * 1024 * 1024;
@@ -361,6 +365,7 @@ class AppSettings {
     bool? sidebarCollapsed,
     List<String>? libraryOrder,
     List<String>? hiddenLibraries,
+    List<String>? pinnedNavLibraries,
   }) {
     return AppSettings(
       directStream: directStream ?? this.directStream,
@@ -375,6 +380,7 @@ class AppSettings {
       sidebarCollapsed: sidebarCollapsed ?? this.sidebarCollapsed,
       libraryOrder: libraryOrder ?? this.libraryOrder,
       hiddenLibraries: hiddenLibraries ?? this.hiddenLibraries,
+      pinnedNavLibraries: pinnedNavLibraries ?? this.pinnedNavLibraries,
     );
   }
 
@@ -390,6 +396,7 @@ class AppSettings {
     'sidebarCollapsed': sidebarCollapsed,
     'libraryOrder': libraryOrder,
     'hiddenLibraries': hiddenLibraries,
+    'pinnedNavLibraries': pinnedNavLibraries,
   };
 
   static AppSettings fromJson(Map<String, dynamic> json) {
@@ -428,6 +435,9 @@ class AppSettings {
       hiddenLibraries:
           (json['hiddenLibraries'] as List<dynamic>?)?.cast<String>() ??
           defaults.hiddenLibraries,
+      pinnedNavLibraries:
+          (json['pinnedNavLibraries'] as List<dynamic>?)?.cast<String>() ??
+          defaults.pinnedNavLibraries,
     );
   }
 }

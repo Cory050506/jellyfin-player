@@ -100,6 +100,15 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
     return result;
   }
 
+  /// Libraries shown in the nav bar (max 4; 5th slot is always Settings).
+  List<JellyfinLibrary> _navLibs(List<JellyfinLibrary> all) {
+    final visible = _visible(all);
+    final pinned = _settings.pinnedNavLibraries;
+    if (pinned.isEmpty) return visible.take(4).toList();
+    final byId = {for (final l in visible) l.id: l};
+    return pinned.map((id) => byId[id]).whereType<JellyfinLibrary>().take(4).toList();
+  }
+
   Future<List<JellyfinLibrary>> _loadLibraries() async {
     final libraries = await _client.getLibraries();
     _allLibraries = libraries;
@@ -134,6 +143,24 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
     );
   }
 
+  Future<void> _customizeNav(List<JellyfinLibrary> visible) async {
+    final pinned = await showAdaptiveSheet<List<String>>(
+      context: context,
+      backgroundColor: AppColors.panel,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _NavCustomizerSheet(
+        libraries: visible,
+        pinned: _settings.pinnedNavLibraries.isEmpty
+            ? visible.take(4).map((l) => l.id).toList()
+            : _settings.pinnedNavLibraries,
+      ),
+    );
+    if (pinned == null) return;
+    await _saveSettings(_settings.copyWith(pinnedNavLibraries: pinned));
+    setState(() => _selectedIndex = 0);
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<JellyfinLibrary>>(
@@ -165,19 +192,16 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
             ),
           );
         }
-        // Cap at 4 library tabs + 1 "More" tab (plugin max is 5)
-        final visible = _visible(all);
-        final tabLibs = visible.take(4).toList();
-        final hasMore = visible.length > 4;
 
+        final tabLibs = _navLibs(all);
+        final visible = _visible(all);
         final tabs = [
           for (final lib in tabLibs)
             NativeGlassNavBarItem(
               label: lib.name,
               symbol: sfSymbolForLibrary(lib.collectionType),
             ),
-          if (hasMore || true) // always show More for settings/sign-out
-            const NativeGlassNavBarItem(label: 'More', symbol: 'ellipsis'),
+          const NativeGlassNavBarItem(label: 'Settings', symbol: 'gear'),
         ];
 
         final pages = [
@@ -188,34 +212,105 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
               itemsFuture: _client.getItems(lib),
               onRefresh: () {},
             ),
-          // More page
+          // Settings tab
           cupertino.CupertinoPageScaffold(
             navigationBar: const cupertino.CupertinoNavigationBar(
-              middle: Text('More'),
+              middle: Text('Settings'),
             ),
             child: SafeArea(
               child: ListView(
                 children: [
-                  cupertino.CupertinoListTile(
-                    title: const Text('Edit Libraries'),
-                    trailing: const cupertino.CupertinoListTileChevron(),
-                    onTap: _editLibraries,
+                  // Libraries section
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 6),
+                    child: Text(
+                      'Libraries',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withValues(alpha: 0.5),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                   ),
-                  cupertino.CupertinoListTile(
-                    title: const Text('Settings'),
-                    trailing: const cupertino.CupertinoListTileChevron(),
-                    onTap: () {
-                      Navigator.of(context).pushAdaptive<void>(
-                        builder: (_) => const SettingsScreen(),
-                        name: '/settings',
-                      );
-                    },
+                  cupertino.CupertinoListSection.insetGrouped(
+                    margin: EdgeInsets.zero,
+                    children: [
+                      cupertino.CupertinoListTile(
+                        leading: const Icon(cupertino.CupertinoIcons.square_grid_2x2),
+                        title: const Text('Edit Libraries'),
+                        subtitle: const Text('Show, hide, and reorder'),
+                        trailing: const cupertino.CupertinoListTileChevron(),
+                        onTap: _editLibraries,
+                      ),
+                      cupertino.CupertinoListTile(
+                        leading: const Icon(cupertino.CupertinoIcons.rectangle_dock),
+                        title: const Text('Customize Navigation'),
+                        subtitle: const Text('Choose up to 4 tabs'),
+                        trailing: const cupertino.CupertinoListTileChevron(),
+                        onTap: () => _customizeNav(visible),
+                      ),
+                    ],
                   ),
-                  cupertino.CupertinoListTile(
-                    title: const Text('Sign Out'),
-                    trailing: const cupertino.CupertinoListTileChevron(),
-                    onTap: widget.onSignedOut,
+                  // App section
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 6),
+                    child: Text(
+                      'App',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withValues(alpha: 0.5),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                   ),
+                  cupertino.CupertinoListSection.insetGrouped(
+                    margin: EdgeInsets.zero,
+                    children: [
+                      cupertino.CupertinoListTile(
+                        leading: const Icon(cupertino.CupertinoIcons.settings),
+                        title: const Text('Playback & Display'),
+                        trailing: const cupertino.CupertinoListTileChevron(),
+                        onTap: () {
+                          Navigator.of(context).pushAdaptive<void>(
+                            builder: (_) => const SettingsScreen(),
+                            name: '/settings',
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  // Account section
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 6),
+                    child: Text(
+                      'Account',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withValues(alpha: 0.5),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  cupertino.CupertinoListSection.insetGrouped(
+                    margin: EdgeInsets.zero,
+                    children: [
+                      cupertino.CupertinoListTile(
+                        leading: const Icon(
+                          cupertino.CupertinoIcons.square_arrow_left,
+                          color: cupertino.CupertinoColors.systemRed,
+                        ),
+                        title: const Text(
+                          'Sign Out',
+                          style: TextStyle(color: cupertino.CupertinoColors.systemRed),
+                        ),
+                        onTap: widget.onSignedOut,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
@@ -223,7 +318,6 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
         ];
 
         return Scaffold(
-          // extendBody lets content draw behind the floating nav bar
           extendBody: true,
           backgroundColor: AppColors.background,
           body: IndexedStack(
@@ -243,8 +337,8 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
                     label: lib.name,
                   ),
                 const cupertino.BottomNavigationBarItem(
-                  icon: Icon(cupertino.CupertinoIcons.ellipsis),
-                  label: 'More',
+                  icon: Icon(cupertino.CupertinoIcons.gear),
+                  label: 'Settings',
                 ),
               ],
               currentIndex: _selectedIndex,
@@ -929,6 +1023,99 @@ class _SidebarButton extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Sheet for choosing which libraries appear in the iOS nav bar (max 4).
+class _NavCustomizerSheet extends StatefulWidget {
+  const _NavCustomizerSheet({
+    required this.libraries,
+    required this.pinned,
+  });
+
+  final List<JellyfinLibrary> libraries;
+  final List<String> pinned;
+
+  @override
+  State<_NavCustomizerSheet> createState() => _NavCustomizerSheetState();
+}
+
+class _NavCustomizerSheetState extends State<_NavCustomizerSheet> {
+  late List<String> _pinned;
+
+  @override
+  void initState() {
+    super.initState();
+    _pinned = List.of(widget.pinned);
+  }
+
+  void _toggle(String id) {
+    setState(() {
+      if (_pinned.contains(id)) {
+        _pinned.remove(id);
+      } else if (_pinned.length < 4) {
+        _pinned.add(id);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Customize Navigation',
+                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        'Choose up to 4  •  ${_pinned.length}/4 selected',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.white.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                cupertino.CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  onPressed: () => Navigator.of(context).pop(_pinned),
+                  child: const Text('Done'),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          for (final lib in widget.libraries)
+            cupertino.CupertinoListTile(
+              leading: Icon(iconForLibrary(lib.collectionType)),
+              title: Text(lib.name),
+              trailing: cupertino.CupertinoCheckbox(
+                value: _pinned.contains(lib.id),
+                onChanged: (_pinned.contains(lib.id) || _pinned.length < 4)
+                    ? (_) => _toggle(lib.id)
+                    : null,
+                activeColor: AppColors.cyan,
+              ),
+              onTap: (_pinned.contains(lib.id) || _pinned.length < 4)
+                  ? () => _toggle(lib.id)
+                  : null,
+            ),
+          const SizedBox(height: 12),
+        ],
       ),
     );
   }
