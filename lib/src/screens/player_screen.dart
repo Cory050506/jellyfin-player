@@ -34,6 +34,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   bool _controlsVisible = true;
   Timer? _hideControlsTimer;
   final FocusNode _focusNode = FocusNode();
+  bool _userExitedFullscreen = false;
 
   bool get _useNativePlayer =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
@@ -155,6 +156,18 @@ class _PlayerScreenState extends State<PlayerScreen> {
           canStartPictureInPictureAutomatically: true,
         );
         setState(() => _nativeController = ctrl);
+        // Listen for when user taps native X to exit fullscreen
+        ctrl.isFullscreenStream.listen((isFullscreen) {
+          if (isFullscreen) {
+            _userExitedFullscreen = true; // Mark that we've entered fullscreen
+          } else if (_userExitedFullscreen && mounted) {
+            // User tapped native X: fullscreen went from true to false
+            unawaited(_reportStopped());
+            if (mounted) {
+              Navigator.of(context).pop();
+            }
+          }
+        });
         // Give the widget one frame to attach the platform view before loading.
         await Future<void>.delayed(const Duration(milliseconds: 100));
         if (!mounted) return;
