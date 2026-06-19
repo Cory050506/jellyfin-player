@@ -274,7 +274,7 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
                         trailing: const cupertino.CupertinoListTileChevron(),
                         onTap: () {
                           Navigator.of(context).pushAdaptive<void>(
-                            builder: (_) => const SettingsScreen(),
+                            builder: (_) => SettingsScreen(session: widget.session),
                             name: '/settings',
                           );
                         },
@@ -554,7 +554,7 @@ class _NativeMacOSShellState extends State<_NativeMacOSShell> {
                             label: 'Settings',
                             onPressed: () {
                               Navigator.of(context).pushAdaptive<void>(
-                                builder: (_) => const SettingsScreen(),
+                                builder: (_) => SettingsScreen(session: widget.session),
                                 name: '/settings',
                               );
                             },
@@ -763,7 +763,7 @@ class _WindowsShellState extends State<_WindowsShell> {
                           label: 'Settings',
                           onPressed: () {
                             Navigator.of(context).pushAdaptive<void>(
-                              builder: (_) => const SettingsScreen(),
+                              builder: (_) => SettingsScreen(session: widget.session),
                               name: '/settings',
                             );
                           },

@@ -1,7 +1,9 @@
 part of '../../main.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.session});
+
+  final JellyfinSession? session;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -26,6 +28,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _update(AppSettings settings) async {
     setState(() => _settings = settings);
     await AppSettingsStore.save(settings);
+    // Keep the accent notifier in sync so the theme rebuilds immediately.
+    AppColors.accentNotifier.value = settings.accentColor != null
+        ? Color(settings.accentColor!)
+        : AppColors.cyan;
   }
 
   Future<void> _reset() async {
@@ -152,6 +158,87 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 18),
+              SettingsSection(
+                title: 'Player',
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.skip_next_rounded),
+                    title: const Text('Skip duration'),
+                    subtitle: Text('${settings.skipDurationSeconds}s per tap'),
+                    trailing: SizedBox(
+                      width: 190,
+                      child: NativeSlider(
+                        min: 5,
+                        max: 90,
+                        step: 5,
+                        value: settings.skipDurationSeconds.toDouble(),
+                        label: '${settings.skipDurationSeconds}s',
+                        onChanged: (v) => _update(
+                          settings.copyWith(skipDurationSeconds: v.round()),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SettingSwitchTile(
+                    value: settings.autoPlayNextEpisode,
+                    onChanged: (v) =>
+                        _update(settings.copyWith(autoPlayNextEpisode: v)),
+                    icon: Icons.queue_play_next_rounded,
+                    title: 'Auto-play next episode',
+                    subtitle: 'Shows a 15-second countdown at the end.',
+                  ),
+                  EnumSettingTile<ResumeBehavior>(
+                    icon: Icons.history_rounded,
+                    title: 'Resume behavior',
+                    value: settings.resumeBehavior,
+                    values: ResumeBehavior.values,
+                    label: resumeBehaviorLabel,
+                    subtitle: resumeBehaviorDescription(settings.resumeBehavior),
+                    onChanged: (v) =>
+                        _update(settings.copyWith(resumeBehavior: v)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              SettingsSection(
+                title: 'Appearance',
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.palette_rounded),
+                    title: const Text('Accent color'),
+                    subtitle: const Text('Used for highlights and the nav bar tint.'),
+                    trailing: _AccentColorPicker(
+                      current: settings.accentColor != null
+                          ? Color(settings.accentColor!)
+                          : AppColors.cyan,
+                      onChanged: (color) => _update(
+                        settings.copyWith(
+                          accentColor: color?.toARGB32(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (widget.session != null) ...[
+                const SizedBox(height: 18),
+                SettingsSection(
+                  title: 'Server',
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.dns_rounded),
+                      title: const Text('Server URL'),
+                      subtitle: Text(widget.session!.serverUrl),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.person_rounded),
+                      title: const Text('Signed in as'),
+                      subtitle: Text(widget.session!.username),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 18),
               SettingsSection(
                 title: 'About this build',
@@ -304,3 +391,68 @@ class _AudioLanguageTileState extends State<_AudioLanguageTile> {
     );
   }
 }
+
+String resumeBehaviorLabel(ResumeBehavior b) => switch (b) {
+  ResumeBehavior.ask => 'Ask',
+  ResumeBehavior.alwaysResume => 'Always resume',
+  ResumeBehavior.alwaysRestart => 'Always restart',
+};
+
+String resumeBehaviorDescription(ResumeBehavior b) => switch (b) {
+  ResumeBehavior.ask => 'Show a prompt when there\'s a saved position.',
+  ResumeBehavior.alwaysResume => 'Always pick up where you left off.',
+  ResumeBehavior.alwaysRestart => 'Always play from the beginning.',
+};
+
+const _accentPresets = [
+  Color(0xff00a4dc), // Jellyfin cyan (default)
+  Color(0xff6366f1), // Indigo
+  Color(0xffec4899), // Pink
+  Color(0xfff59e0b), // Amber
+  Color(0xff10b981), // Emerald
+  Color(0xffef4444), // Red
+  Color(0xffffffff), // White
+];
+
+class _AccentColorPicker extends StatelessWidget {
+  const _AccentColorPicker({required this.current, required this.onChanged});
+
+  final Color current;
+  final ValueChanged<Color?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (final color in _accentPresets)
+          GestureDetector(
+            onTap: () => onChanged(color == AppColors.cyan ? null : color),
+            child: Container(
+              width: 26,
+              height: 26,
+              margin: const EdgeInsets.only(left: 6),
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: current.toARGB32() == color.toARGB32()
+                      ? Colors.white
+                      : Colors.transparent,
+                  width: 2.5,
+                ),
+                boxShadow: [
+                  if (current.toARGB32() == color.toARGB32())
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.6),
+                      blurRadius: 6,
+                    ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+

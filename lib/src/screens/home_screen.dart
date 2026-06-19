@@ -169,6 +169,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       });
                     },
                     onSignedOut: widget.onSignedOut,
+                    onSettings: () {
+                      Navigator.of(context).pushAdaptive<void>(
+                        builder: (_) => SettingsScreen(session: widget.session),
+                        name: '/settings',
+                      );
+                    },
                   ),
                   Expanded(
                     child: ItemsView(
@@ -207,6 +213,7 @@ class MediaSidebar extends StatelessWidget {
     required this.onLibrarySelected,
     required this.onRefresh,
     required this.onSignedOut,
+    required this.onSettings,
   });
 
   final String username;
@@ -218,6 +225,7 @@ class MediaSidebar extends StatelessWidget {
   final ValueChanged<JellyfinLibrary> onLibrarySelected;
   final VoidCallback onRefresh;
   final VoidCallback onSignedOut;
+  final VoidCallback onSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -354,10 +362,7 @@ class MediaSidebar extends StatelessWidget {
                   selected: false,
                   expanded: expanded,
                   onPressed: () {
-                    Navigator.of(context).pushAdaptive<void>(
-                      builder: (_) => const SettingsScreen(),
-                      name: '/settings',
-                    );
+                    onSettings();
                   },
                 ),
                 SidebarButton(

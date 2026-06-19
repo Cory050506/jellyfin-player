@@ -7,12 +7,14 @@ class PlayerScreen extends StatefulWidget {
     required this.item,
     this.audioStreamIndex,
     this.subtitleStreamIndex,
+    this.nextEpisode,
   });
 
   final JellyfinClient client;
   final JellyfinItem item;
   final int? audioStreamIndex;
   final int? subtitleStreamIndex;
+  final JellyfinItem? nextEpisode;
 
   @override
   State<PlayerScreen> createState() => _PlayerScreenState();
@@ -35,6 +37,9 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
   Timer? _hideControlsTimer;
   final FocusNode _focusNode = FocusNode();
   bool _userExitedFullscreen = false;
+  // Auto-play countdown (seconds remaining until next episode starts)
+  int? _upNextCountdown;
+  Timer? _upNextTimer;
 
   bool get _useNativePlayer =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
@@ -181,11 +186,10 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
           subtitleStreamIndex: widget.subtitleStreamIndex,
         );
         if (!mounted) return;
-        final resume = widget.item.resumePosition;
-        await ctrl.loadUrl(
-          url: streamUrl,
-          startAt: resume > const Duration(seconds: 5) ? resume : null,
+        final startAt = await _resolveResumePosition(
+          settings, widget.item.resumePosition,
         );
+        await ctrl.loadUrl(url: streamUrl, startAt: startAt);
         // Brief delay to ensure video is ready before playing
         await Future<void>.delayed(const Duration(milliseconds: 200));
         await ctrl.play();
@@ -223,14 +227,11 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
         audioStreamIndex: widget.audioStreamIndex,
         subtitleStreamIndex: widget.subtitleStreamIndex,
       );
-      final resumePosition = widget.item.resumePosition;
+      final startAt = await _resolveResumePosition(
+        settings, widget.item.resumePosition,
+      );
       await player.open(
-        Media(
-          url.toString(),
-          start: resumePosition > const Duration(seconds: 5)
-              ? resumePosition
-              : null,
-        ),
+        Media(url.toString(), start: startAt),
         play: true,
       );
       await _applyDefaultTrackSettings(settings);
@@ -419,6 +420,79 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
     return position < realTracks.length ? realTracks[position] : null;
   }
 
+  /// Returns the resume start time based on the settings and item position.
+  /// Shows a dialog if [ResumeBehavior.ask] and there's a saved position.
+  Future<Duration?> _resolveResumePosition(
+    AppSettings settings,
+    Duration savedPosition,
+  ) async {
+    if (savedPosition <= const Duration(seconds: 5)) return null;
+    switch (settings.resumeBehavior) {
+      case ResumeBehavior.alwaysResume:
+        return savedPosition;
+      case ResumeBehavior.alwaysRestart:
+        return null;
+      case ResumeBehavior.ask:
+        if (!mounted) return savedPosition;
+        final resume = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Resume playback?'),
+            content: Text(
+              'Resume from ${formatDuration(savedPosition)} or start from the beginning?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Restart'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Resume'),
+              ),
+            ],
+          ),
+        );
+        return (resume ?? true) ? savedPosition : null;
+    }
+  }
+
+  void _startUpNextCountdown() {
+    if (_upNextTimer != null) return;
+    setState(() => _upNextCountdown = 15);
+    _upNextTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) { t.cancel(); return; }
+      final count = (_upNextCountdown ?? 0) - 1;
+      if (count <= 0) {
+        t.cancel();
+        _playNext();
+      } else {
+        setState(() => _upNextCountdown = count);
+      }
+    });
+  }
+
+  void _cancelUpNextCountdown() {
+    _upNextTimer?.cancel();
+    _upNextTimer = null;
+    if (mounted) setState(() => _upNextCountdown = null);
+  }
+
+  void _playNext() {
+    final next = widget.nextEpisode;
+    if (next == null || !mounted) return;
+    _cancelUpNextCountdown();
+    Navigator.of(context).pushReplacement(
+      adaptivePageRoute<void>(
+        builder: (_) => PlayerScreen(
+          client: widget.client,
+          item: next,
+        ),
+        name: '/player/${next.id}',
+      ),
+    );
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Don't interfere - let the plugin's automatic PiP handle background transitions
@@ -428,6 +502,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
   void dispose() {
     _progressTimer?.cancel();
     _hideControlsTimer?.cancel();
+    _upNextTimer?.cancel();
     _focusNode.dispose();
     WidgetsBinding.instance.removeObserver(this);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -456,15 +531,23 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
     if (!_useNativePlayer && _player == null) return;
     try {
       final pos = _currentPosition;
-      final itemId = widget.item.id;
-      final ticks = (pos.inMicroseconds ~/ 10).toString();
-      debugPrint('reportProgress: $itemId at ${pos.inSeconds}s ($ticks ticks), paused: ${!_currentlyPlaying}');
       await widget.client.reportPlaybackProgress(
         widget.item,
         position: pos,
         paused: !_currentlyPlaying,
       );
-      debugPrint('reportProgress success');
+      // Auto-play next episode: trigger countdown when within 30s of end.
+      if (!_useNativePlayer &&
+          widget.nextEpisode != null &&
+          (_settings?.autoPlayNextEpisode ?? true) &&
+          _upNextCountdown == null) {
+        final duration = _player?.state.duration ?? Duration.zero;
+        if (duration > const Duration(seconds: 60) &&
+            duration - pos < const Duration(seconds: 30) &&
+            _currentlyPlaying) {
+          _startUpNextCountdown();
+        }
+      }
     } catch (e) {
       debugPrint('reportProgress error: $e');
     }
@@ -529,6 +612,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
             onSeek: (pos) => unawaited(player.seek(pos)),
             onPlayPause: () => unawaited(player.playOrPause()),
             item: widget.item,
+            skipSeconds: settings?.skipDurationSeconds ?? 30,
           )
         : null;
 
@@ -653,6 +737,18 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
                           child: bottomChrome,
                         ),
                       ),
+                    ),
+                  ),
+                // Up Next banner
+                if (_upNextCountdown != null && widget.nextEpisode != null)
+                  Positioned(
+                    right: 24,
+                    bottom: 110,
+                    child: _UpNextBanner(
+                      nextEpisode: widget.nextEpisode!,
+                      countdown: _upNextCountdown!,
+                      onPlayNow: _playNext,
+                      onCancel: _cancelUpNextCountdown,
                     ),
                   ),
               ],
@@ -954,6 +1050,7 @@ class PlayerBottomChrome extends StatelessWidget {
     required this.onSeek,
     required this.onPlayPause,
     required this.item,
+    this.skipSeconds = 30,
   });
 
   final Stream<Duration> positionStream;
@@ -962,6 +1059,7 @@ class PlayerBottomChrome extends StatelessWidget {
   final void Function(Duration) onSeek;
   final VoidCallback onPlayPause;
   final JellyfinItem item;
+  final int skipSeconds;
 
   @override
   Widget build(BuildContext context) {
@@ -997,17 +1095,12 @@ class PlayerBottomChrome extends StatelessWidget {
                       Row(
                         children: [
                           IconButton.filledTonal(
-                            tooltip: 'Back 10 seconds',
+                            tooltip: 'Back $skipSeconds seconds',
                             onPressed: () {
-                              final target =
-                                  position - const Duration(seconds: 10);
-                              onSeek(
-                                target < Duration.zero
-                                    ? Duration.zero
-                                    : target,
-                              );
+                              final target = position - Duration(seconds: skipSeconds);
+                              onSeek(target < Duration.zero ? Duration.zero : target);
                             },
-                            icon: const Icon(Icons.replay_10_rounded),
+                            icon: Icon(_replayIcon(skipSeconds)),
                           ),
                           const SizedBox(width: 8),
                           StreamBuilder<bool>(
@@ -1027,13 +1120,12 @@ class PlayerBottomChrome extends StatelessWidget {
                           ),
                           const SizedBox(width: 8),
                           IconButton.filledTonal(
-                            tooltip: 'Forward 30 seconds',
+                            tooltip: 'Forward $skipSeconds seconds',
                             onPressed: () {
-                              final target =
-                                  position + const Duration(seconds: 30);
+                              final target = position + Duration(seconds: skipSeconds);
                               onSeek(target > duration ? duration : target);
                             },
-                            icon: const Icon(Icons.forward_30_rounded),
+                            icon: Icon(_forwardIcon(skipSeconds)),
                           ),
                           const SizedBox(width: 12),
                           Text(
@@ -1243,6 +1335,94 @@ class NativeSubtitleTrackSheet extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+IconData _replayIcon(int seconds) {
+  if (seconds <= 5) return Icons.replay_5_rounded;
+  if (seconds <= 10) return Icons.replay_10_rounded;
+  if (seconds <= 30) return Icons.replay_30_rounded;
+  return Icons.replay_rounded;
+}
+
+IconData _forwardIcon(int seconds) {
+  if (seconds <= 5) return Icons.forward_5_rounded;
+  if (seconds <= 10) return Icons.forward_10_rounded;
+  if (seconds <= 30) return Icons.forward_30_rounded;
+  return Icons.forward_rounded;
+}
+
+class _UpNextBanner extends StatelessWidget {
+  const _UpNextBanner({
+    required this.nextEpisode,
+    required this.countdown,
+    required this.onPlayNow,
+    required this.onCancel,
+  });
+
+  final JellyfinItem nextEpisode;
+  final int countdown;
+  final VoidCallback onPlayNow;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 280,
+      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+      decoration: BoxDecoration(
+        color: const Color(0xdd111820),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Up next in ${countdown}s',
+            style: const TextStyle(
+              color: Colors.white54,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            nextEpisode.displayTitle,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton(
+                  onPressed: onPlayNow,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(36),
+                    padding: EdgeInsets.zero,
+                  ),
+                  child: const Text('Play now'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: onCancel,
+                tooltip: 'Cancel',
+                icon: const Icon(Icons.close_rounded, size: 18),
+                color: Colors.white54,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

@@ -45,9 +45,12 @@ part 'src/screens/settings_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
+  final savedSettings = await AppSettingsStore.load();
+  if (savedSettings.accentColor != null) {
+    AppColors.accentNotifier.value = Color(savedSettings.accentColor!);
+  }
   if (isDesktopPlatform) {
     await windowManager.ensureInitialized();
-    // Initialize acrylic window effects for Windows/macOS
     _initializeAcrylic();
   }
   runApp(const JellyfinPlayerApp());

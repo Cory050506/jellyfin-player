@@ -304,6 +304,10 @@ class AppSettings {
     required this.libraryOrder,
     required this.hiddenLibraries,
     required this.pinnedNavLibraries,
+    required this.skipDurationSeconds,
+    required this.autoPlayNextEpisode,
+    required this.resumeBehavior,
+    required this.accentColor,
   });
 
   static const defaults = AppSettings(
@@ -319,6 +323,10 @@ class AppSettings {
     libraryOrder: <String>[],
     hiddenLibraries: <String>[],
     pinnedNavLibraries: <String>[],
+    skipDurationSeconds: 30,
+    autoPlayNextEpisode: true,
+    resumeBehavior: ResumeBehavior.ask,
+    accentColor: null,
   );
 
   final bool directStream;
@@ -341,6 +349,14 @@ class AppSettings {
   final List<String> hiddenLibraries;
   /// Library ids pinned to the iOS nav bar (max 4). Empty = auto first 4.
   final List<String> pinnedNavLibraries;
+  /// Seconds to skip back/forward in the player controls.
+  final int skipDurationSeconds;
+  /// Whether to automatically play the next episode when one finishes.
+  final bool autoPlayNextEpisode;
+  /// What to do when an item has a saved resume position.
+  final ResumeBehavior resumeBehavior;
+  /// Accent color as ARGB int, or null to use the default cyan.
+  final int? accentColor;
 
   int get bufferSizeBytes =>
       highBitrateCache ? 512 * 1024 * 1024 : 64 * 1024 * 1024;
@@ -366,6 +382,10 @@ class AppSettings {
     List<String>? libraryOrder,
     List<String>? hiddenLibraries,
     List<String>? pinnedNavLibraries,
+    int? skipDurationSeconds,
+    bool? autoPlayNextEpisode,
+    ResumeBehavior? resumeBehavior,
+    Object? accentColor = _sentinel,
   }) {
     return AppSettings(
       directStream: directStream ?? this.directStream,
@@ -381,10 +401,16 @@ class AppSettings {
       libraryOrder: libraryOrder ?? this.libraryOrder,
       hiddenLibraries: hiddenLibraries ?? this.hiddenLibraries,
       pinnedNavLibraries: pinnedNavLibraries ?? this.pinnedNavLibraries,
+      skipDurationSeconds: skipDurationSeconds ?? this.skipDurationSeconds,
+      autoPlayNextEpisode: autoPlayNextEpisode ?? this.autoPlayNextEpisode,
+      resumeBehavior: resumeBehavior ?? this.resumeBehavior,
+      accentColor: accentColor == _sentinel ? this.accentColor : accentColor as int?,
     );
   }
 
-  Map<String, Object> toJson() => {
+  static const _sentinel = Object();
+
+  Map<String, Object?> toJson() => {
     'directStream': directStream,
     'highBitrateCache': highBitrateCache,
     'hardwareDecoding': hardwareDecoding,
@@ -397,6 +423,10 @@ class AppSettings {
     'libraryOrder': libraryOrder,
     'hiddenLibraries': hiddenLibraries,
     'pinnedNavLibraries': pinnedNavLibraries,
+    'skipDurationSeconds': skipDurationSeconds,
+    'autoPlayNextEpisode': autoPlayNextEpisode,
+    'resumeBehavior': resumeBehavior.name,
+    'accentColor': accentColor,
   };
 
   static AppSettings fromJson(Map<String, dynamic> json) {
@@ -438,6 +468,16 @@ class AppSettings {
       pinnedNavLibraries:
           (json['pinnedNavLibraries'] as List<dynamic>?)?.cast<String>() ??
           defaults.pinnedNavLibraries,
+      skipDurationSeconds:
+          json['skipDurationSeconds'] as int? ?? defaults.skipDurationSeconds,
+      autoPlayNextEpisode:
+          json['autoPlayNextEpisode'] as bool? ?? defaults.autoPlayNextEpisode,
+      resumeBehavior: enumByName(
+        ResumeBehavior.values,
+        json['resumeBehavior'] as String?,
+        defaults.resumeBehavior,
+      ),
+      accentColor: json['accentColor'] as int?,
     );
   }
 }
@@ -447,3 +487,5 @@ enum HdrMode { passthrough, toneMap, off }
 enum DefaultSubtitleMode { auto, off }
 
 enum PlayerFit { contain, cover, fill }
+
+enum ResumeBehavior { ask, alwaysResume, alwaysRestart }

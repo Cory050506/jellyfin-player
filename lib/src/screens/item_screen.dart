@@ -13,6 +13,7 @@ class ItemScreen extends StatefulWidget {
 class _ItemScreenState extends State<ItemScreen> {
   late final Future<JellyfinItem> _detailsFuture = _loadDetails();
   Future<List<JellyfinItem>>? _childrenFuture;
+  List<JellyfinItem> _episodeList = const [];
   late final Future<List<JellyfinItem>> _similarFuture = widget.client
       .getSimilarItems(widget.item.id);
   int? _selectedAudioStreamIndex;
@@ -24,7 +25,10 @@ class _ItemScreenState extends State<ItemScreen> {
     if (item.type == 'Series' ||
         item.type == 'Season' ||
         item.type == 'Folder') {
-      _childrenFuture = widget.client.getChildren(item.id);
+      final childFuture = widget.client.getChildren(item.id);
+      _childrenFuture = childFuture;
+      final children = await childFuture;
+      if (mounted) _episodeList = children.where((c) => c.isPlayable).toList();
     }
     final settings = await AppSettingsStore.load();
     _initializeTrackSelections(item, settings);
@@ -62,6 +66,10 @@ class _ItemScreenState extends State<ItemScreen> {
     if (!mounted) {
       return;
     }
+    final idx = _episodeList.indexWhere((e) => e.id == item.id);
+    final nextEpisode = (idx >= 0 && idx + 1 < _episodeList.length)
+        ? _episodeList[idx + 1]
+        : null;
     Navigator.of(context).pushAdaptive<void>(
       builder: (_) => PlayerScreen(
         client: widget.client,
@@ -72,6 +80,7 @@ class _ItemScreenState extends State<ItemScreen> {
         subtitleStreamIndex: item.id == widget.item.id
             ? _selectedSubtitleStreamIndex
             : null,
+        nextEpisode: nextEpisode,
       ),
       name: '/player/${playableItem.id}',
     );
