@@ -211,14 +211,14 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
                 ),
               ],
             ),
-            // iOS 26 Liquid Glass bottom nav bar
+            // iOS 26 Glass bottom nav bar
             Positioned(
               bottom: 0,
               left: 0,
               right: 0,
               child: SafeArea(
                 top: false,
-                child: _LiquidGlassNavBar(
+                child: _GlassNavBar(
                   items: [
                     for (final lib in visible)
                       _NavBarItem(
@@ -918,7 +918,8 @@ class _SidebarButton extends StatelessWidget {
   }
 }
 
-/// iOS 26 Liquid Glass nav bar item
+// iOS 26 Liquid Glass Navigation
+
 class _NavBarItem {
   final IconData icon;
   final String label;
@@ -929,13 +930,12 @@ class _NavBarItem {
   });
 }
 
-/// iOS 26 Liquid Glass bottom navigation bar
-class _LiquidGlassNavBar extends StatelessWidget {
+class _GlassNavBar extends StatelessWidget {
   final List<_NavBarItem> items;
   final int selectedIndex;
   final ValueChanged<int> onTap;
 
-  const _LiquidGlassNavBar({
+  const _GlassNavBar({
     required this.items,
     required this.selectedIndex,
     required this.onTap,
@@ -970,7 +970,6 @@ class _LiquidGlassNavBar extends StatelessWidget {
   }
 }
 
-/// Individual nav bar button
 class _NavBarButton extends StatelessWidget {
   final _NavBarItem item;
   final bool selected;
@@ -1017,3 +1016,4 @@ class _NavBarButton extends StatelessWidget {
     );
   }
 }
+

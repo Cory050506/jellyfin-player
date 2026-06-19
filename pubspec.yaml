@@ -53,6 +53,9 @@ dependencies:
   protocol_handler: any
   touch_bar: any
   mac_menu_bar: any
+  native_glass_navbar:
+    git:
+      url: https://github.com/TechSupportz/native_glass_navbar.git
 
 dev_dependencies:
   flutter_test:
