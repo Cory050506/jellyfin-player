@@ -1,4 +1,4 @@
-package com.example.jellyfin_player
+package com.hqfin.app
 
 import io.flutter.embedding.android.FlutterActivity
 
