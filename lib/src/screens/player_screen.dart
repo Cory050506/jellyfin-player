@@ -18,7 +18,7 @@ class PlayerScreen extends StatefulWidget {
   State<PlayerScreen> createState() => _PlayerScreenState();
 }
 
-class _PlayerScreenState extends State<PlayerScreen> {
+class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver {
   // media_kit backend (non-iOS)
   Player? _player;
   VideoController? _controller;
@@ -44,6 +44,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     unawaited(WakelockPlus.enable());
+    // Don't pause when app goes to background - let PiP take over
+    WidgetsBinding.instance.addObserver(this);
     unawaited(_initialize());
     if (isDesktopPlatform) {
       unawaited(_syncFullscreenState());
@@ -418,10 +420,17 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Don't pause playback when app goes to background - PiP will handle it
+    // Do nothing here - let native PiP take over
+  }
+
+  @override
   void dispose() {
     _progressTimer?.cancel();
     _hideControlsTimer?.cancel();
     _focusNode.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     unawaited(WakelockPlus.disable());
     unawaited(_reportStopped());
