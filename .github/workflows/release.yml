@@ -213,27 +213,27 @@ jobs:
         run: |
           DATE=$(date -u "+%a, %d %b %Y %H:%M:%S +0000")
           DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/hqfin-macos.zip"
-          cat > appcast.xml << EOF
-<?xml version="1.0" encoding="utf-8"?>
-<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
-  <channel>
-    <title>HQFin</title>
-    <item>
-      <title>HQFin ${VERSION}</title>
-      <pubDate>${DATE}</pubDate>
-      <sparkle:version>${VERSION#v}</sparkle:version>
-      <sparkle:shortVersionString>${VERSION#v}</sparkle:shortVersionString>
-      <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
-      <enclosure
-        url="${DOWNLOAD_URL}"
-        sparkle:version="${VERSION#v}"
-        sparkle:edSignature="${SPARKLE_SIGNATURE}"
-        length="${MACOS_SIZE}"
-        type="application/octet-stream"/>
-    </item>
-  </channel>
-</rss>
-EOF
+          {
+            echo '<?xml version="1.0" encoding="utf-8"?>'
+            echo '<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">'
+            echo '  <channel>'
+            echo "    <title>HQFin</title>"
+            echo "    <item>"
+            echo "      <title>HQFin ${VERSION}</title>"
+            echo "      <pubDate>${DATE}</pubDate>"
+            echo "      <sparkle:version>${VERSION#v}</sparkle:version>"
+            echo "      <sparkle:shortVersionString>${VERSION#v}</sparkle:shortVersionString>"
+            echo "      <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>"
+            echo "      <enclosure"
+            echo "        url=\"${DOWNLOAD_URL}\""
+            echo "        sparkle:version=\"${VERSION#v}\""
+            echo "        sparkle:edSignature=\"${SPARKLE_SIGNATURE}\""
+            echo "        length=\"${MACOS_SIZE}\""
+            echo "        type=\"application/octet-stream\"/>"
+            echo "    </item>"
+            echo "  </channel>"
+            echo '</rss>'
+          } > appcast.xml
 
       - name: Commit updated appcast
         run: |
