@@ -71,9 +71,36 @@ jobs:
           path: build/macos/Build/Products/Release/jellyfin-player-macos.zip
 
   # ── iOS ────────────────────────────────────────────────────────────────────
-  # Disabled: cupertino_native uses iOS 26 glass APIs requiring Xcode 26,
-  # which GitHub Actions runners don't yet provide. Re-enable when available.
-  # build-ios: ...
+  build-ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build iOS (unsigned)
+        run: flutter build ios --release --no-codesign
+
+      - name: Package IPA
+        run: |
+          mkdir -p build/ios/iphoneos/Payload
+          cp -r build/ios/iphoneos/Runner.app build/ios/iphoneos/Payload/
+          cd build/ios/iphoneos
+          zip -r jellyfin-player.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: build/ios/iphoneos/jellyfin-player.ipa
 
   # ── Android ────────────────────────────────────────────────────────────────
   build-android:
@@ -130,7 +157,7 @@ jobs:
 
   # ── Release + appcast ──────────────────────────────────────────────────────
   release:
-    needs: [build-macos, build-android, build-windows]
+    needs: [build-macos, build-ios, build-android, build-windows]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -157,6 +184,7 @@ jobs:
           make_latest: true
           files: |
             artifacts/macos/jellyfin-player-macos.zip
+            artifacts/ios/jellyfin-player.ipa
             artifacts/android/app-release.apk
             artifacts/windows/jellyfin-player-windows.zip
 
