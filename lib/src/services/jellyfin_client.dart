@@ -5,7 +5,7 @@ class JellyfinClient {
     : session = session,
       baseUrl = baseUrl ?? session!.serverUrl;
 
-  static const clientName = 'Jellyfin Player';
+  static const clientName = 'HQFin';
   static const clientVersion = '0.1.0';
 
   final JellyfinSession? session;

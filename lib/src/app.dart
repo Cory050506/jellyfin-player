@@ -14,7 +14,7 @@ class JellyfinPlayerApp extends StatelessWidget {
             const SingleActivator(LogicalKeyboardKey.gameButtonA): const ActivateIntent(),
           },
           child: MaterialApp(
-          title: 'Jellyfin Player',
+          title: 'HQFin',
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
             useMaterial3: true,

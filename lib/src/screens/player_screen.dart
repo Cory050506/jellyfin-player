@@ -206,7 +206,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
       // Non-iOS: media_kit / mpv backend.
       final player = Player(
         configuration: PlayerConfiguration(
-          title: 'Jellyfin Player',
+          title: 'HQFin',
           bufferSize: settings.bufferSizeBytes,
           logLevel: MPVLogLevel.error,
         ),

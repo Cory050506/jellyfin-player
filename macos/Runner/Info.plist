@@ -31,7 +31,7 @@
 	<key>SUFeedURL</key>
 	<string>https://raw.githubusercontent.com/Cory050506/jellyfin-player/master/appcast.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>SPARKLE_PUBLIC_KEY_PLACEHOLDER</string>
+	<string>MCowBQYDK2VwAyEAgkV7cOtB8Hck+F6dRP7EM/O+CGCZWCuLph+wiGRZm0o=</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 </dict>

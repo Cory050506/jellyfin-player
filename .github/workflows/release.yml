@@ -44,7 +44,7 @@ jobs:
         run: |
           APP="build/macos/Build/Products/Release/jellyfin_player.app"
           # Sign with self-signed cert (identity name set during cert creation)
-          codesign --deep --force --sign "Jellyfin Player" "$APP" || \
+          codesign --deep --force --sign "HQFin" "$APP" || \
           codesign --deep --force --sign "-" "$APP"
 
       - name: Package as zip (Sparkle requires zip for macOS)
@@ -197,9 +197,9 @@ jobs:
           <?xml version="1.0" encoding="utf-8"?>
           <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
             <channel>
-              <title>Jellyfin Player</title>
+              <title>HQFin</title>
               <item>
-                <title>Jellyfin Player ${VERSION}</title>
+                <title>HQFin ${VERSION}</title>
                 <pubDate>${DATE}</pubDate>
                 <sparkle:version>${VERSION#v}</sparkle:version>
                 <sparkle:shortVersionString>${VERSION#v}</sparkle:shortVersionString>
