@@ -1,0 +1,224 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [master]
+
+concurrency:
+  group: release
+  cancel-in-progress: true
+
+jobs:
+  # ── macOS ──────────────────────────────────────────────────────────────────
+  build-macos:
+    runs-on: macos-15
+    outputs:
+      signature: ${{ steps.sign.outputs.signature }}
+      size: ${{ steps.sign.outputs.size }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Import self-signed signing certificate
+        env:
+          CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+        run: |
+          echo "$CERT_P12_BASE64" | base64 --decode > /tmp/cert.p12
+          security create-keychain -p ci build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p ci build.keychain
+          security import /tmp/cert.p12 -k build.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k ci build.keychain
+
+      - name: Build macOS
+        run: flutter build macos --release
+
+      - name: Sign app
+        run: |
+          APP="build/macos/Build/Products/Release/jellyfin_player.app"
+          # Sign with self-signed cert (identity name set during cert creation)
+          codesign --deep --force --sign "Jellyfin Player" "$APP" || \
+          codesign --deep --force --sign "-" "$APP"
+
+      - name: Package as zip (Sparkle requires zip for macOS)
+        run: |
+          cd build/macos/Build/Products/Release
+          zip -r --symlinks jellyfin-player-macos.zip jellyfin_player.app
+
+      - name: Sign update with Sparkle EdDSA key
+        id: sign
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          echo "$SPARKLE_PRIVATE_KEY" > /tmp/sparkle_private.pem
+          SIGNATURE=$(openssl pkeyutl -sign -inkey /tmp/sparkle_private.pem \
+            -rawin -in build/macos/Build/Products/Release/jellyfin-player-macos.zip \
+            | base64)
+          SIZE=$(stat -f%z build/macos/Build/Products/Release/jellyfin-player-macos.zip)
+          echo "signature=$SIGNATURE" >> $GITHUB_OUTPUT
+          echo "size=$SIZE" >> $GITHUB_OUTPUT
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: build/macos/Build/Products/Release/jellyfin-player-macos.zip
+
+  # ── iOS ────────────────────────────────────────────────────────────────────
+  build-ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build iOS (unsigned)
+        run: flutter build ios --release --no-codesign
+
+      - name: Package IPA
+        run: |
+          mkdir -p build/ios/iphoneos/Payload
+          cp -r build/ios/iphoneos/Runner.app build/ios/iphoneos/Payload/
+          cd build/ios/iphoneos
+          zip -r jellyfin-player.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: build/ios/iphoneos/jellyfin-player.ipa
+
+  # ── Android ────────────────────────────────────────────────────────────────
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build APK (universal, good for TV sideload)
+        run: flutter build apk --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+  # ── Windows ────────────────────────────────────────────────────────────────
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Build Windows
+        run: flutter build windows --release
+
+      - name: Package as zip
+        shell: pwsh
+        run: |
+          Compress-Archive -Path build\windows\x64\runner\Release\* `
+            -DestinationPath jellyfin-player-windows.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: jellyfin-player-windows.zip
+
+  # ── Release + appcast ──────────────────────────────────────────────────────
+  release:
+    needs: [build-macos, build-ios, build-android, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Get version from pubspec
+        id: version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d '[:space:]')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v${VERSION%+*}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        id: release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          make_latest: true
+          files: |
+            artifacts/macos/jellyfin-player-macos.zip
+            artifacts/ios/jellyfin-player.ipa
+            artifacts/android/app-release.apk
+            artifacts/windows/jellyfin-player-windows.zip
+
+      - name: Update appcast.xml
+        env:
+          SPARKLE_SIGNATURE: ${{ needs.build-macos.outputs.signature }}
+          MACOS_SIZE: ${{ needs.build-macos.outputs.size }}
+          VERSION: ${{ steps.version.outputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          DATE=$(date -u "+%a, %d %b %Y %H:%M:%S +0000")
+          DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/jellyfin-player-macos.zip"
+          cat > appcast.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+            <channel>
+              <title>Jellyfin Player</title>
+              <item>
+                <title>Jellyfin Player ${VERSION}</title>
+                <pubDate>${DATE}</pubDate>
+                <sparkle:version>${VERSION#v}</sparkle:version>
+                <sparkle:shortVersionString>${VERSION#v}</sparkle:shortVersionString>
+                <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
+                <enclosure
+                  url="${DOWNLOAD_URL}"
+                  sparkle:version="${VERSION#v}"
+                  sparkle:edSignature="${SPARKLE_SIGNATURE}"
+                  length="${MACOS_SIZE}"
+                  type="application/octet-stream"/>
+              </item>
+            </channel>
+          </rss>
+          EOF
+
+      - name: Commit updated appcast
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add appcast.xml
+          git diff --staged --quiet || git commit -m "Update appcast to ${{ steps.version.outputs.tag }} [skip ci]"
+          git push

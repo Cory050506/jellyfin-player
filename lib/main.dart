@@ -65,10 +65,13 @@ void main() async {
       appName: info.appName,
       appPath: Platform.resolvedExecutable,
     );
-    FlutterWindowClose.setWindowShouldCloseHandler(() async {
-      // Allow close immediately — no blocking dialog needed
-      return true;
-    });
+    FlutterWindowClose.setWindowShouldCloseHandler(() async => true);
+    if (defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows) {
+      await autoUpdater.setFeedURL(
+        'https://raw.githubusercontent.com/Cory050506/jellyfin-player/master/appcast.xml',
+      );
+    }
   }
   runApp(const JellyfinPlayerApp());
 }

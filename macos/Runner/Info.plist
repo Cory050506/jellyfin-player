@@ -28,5 +28,11 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/Cory050506/jellyfin-player/master/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>SPARKLE_PUBLIC_KEY_PLACEHOLDER</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
 </dict>
 </plist>
