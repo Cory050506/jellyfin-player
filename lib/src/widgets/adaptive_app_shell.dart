@@ -1063,7 +1063,10 @@ class _NavCustomizerSheetState extends State<_NavCustomizerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
+    return Material(
+      color: AppColors.panel,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+      child: SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1117,7 +1120,7 @@ class _NavCustomizerSheetState extends State<_NavCustomizerSheet> {
           const SizedBox(height: 12),
         ],
       ),
-    );
+    ));
   }
 }
 

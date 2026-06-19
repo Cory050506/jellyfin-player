@@ -404,7 +404,10 @@ class _LibraryEditorSheetState extends State<LibraryEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
+    return Material(
+      color: AppColors.panel,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+      child: SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
         child: Column(
@@ -492,7 +495,7 @@ class _LibraryEditorSheetState extends State<LibraryEditorSheet> {
             ),
           ],
         ),
-      ),
+      )),
     );
   }
 }
