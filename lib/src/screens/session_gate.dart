@@ -29,10 +29,9 @@ class _SessionGateState extends State<SessionGate> {
   }
 
   void _openHome(JellyfinSession session) {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => HomeScreen(session: session, onSignedOut: _signOut),
-      ),
+    Navigator.of(context).pushReplacementAdaptive<void, void>(
+      builder: (_) => HomeScreen(session: session, onSignedOut: _signOut),
+      name: '/home',
     );
   }
 
@@ -42,7 +41,10 @@ class _SessionGateState extends State<SessionGate> {
       return;
     }
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => LoginScreen(onSignedIn: _openHome)),
+      adaptivePageRoute(
+        builder: (_) => LoginScreen(onSignedIn: _openHome),
+        name: '/login',
+      ),
       (_) => false,
     );
   }

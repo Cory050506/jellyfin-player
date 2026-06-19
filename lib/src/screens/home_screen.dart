@@ -83,7 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _editLibraries() async {
-    final result = await showModalBottomSheet<({List<String> order, List<String> hidden})>(
+    final result = await showAdaptiveSheet<({List<String> order, List<String> hidden})>(
       context: context,
       backgroundColor: AppColors.panel,
       isScrollControlled: true,
@@ -354,8 +354,9 @@ class MediaSidebar extends StatelessWidget {
                   selected: false,
                   expanded: expanded,
                   onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    Navigator.of(context).pushAdaptive<void>(
+                      builder: (_) => const SettingsScreen(),
+                      name: '/settings',
                     );
                   },
                 ),

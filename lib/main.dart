@@ -22,6 +22,8 @@ part 'src/services/app_settings_store.dart';
 part 'src/services/jellyfin_client.dart';
 part 'src/utils.dart';
 part 'src/widgets/adaptive_controls.dart';
+part 'src/widgets/adaptive_navigation.dart';
+part 'src/widgets/adaptive_sheets.dart';
 part 'src/widgets/media_artwork.dart';
 part 'src/widgets/status_panes.dart';
 part 'src/screens/session_gate.dart';

@@ -80,11 +80,10 @@ class ItemsView extends StatelessWidget {
                     imageUrl: client.imageUrl(item),
                     onTap: () {
                       Navigator.of(context)
-                          .push(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  ItemScreen(client: client, item: item),
-                            ),
+                          .pushAdaptive<void>(
+                            builder: (_) =>
+                                ItemScreen(client: client, item: item),
+                            name: '/item/${item.id}',
                           )
                           .then((_) => onRefresh?.call());
                     },

@@ -458,7 +458,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
       final pos = _currentPosition;
       final itemId = widget.item.id;
       final ticks = (pos.inMicroseconds ~/ 10).toString();
-      debugPrint('reportProgress: $itemId at ${pos.inSeconds}s (${ticks} ticks), paused: ${!_currentlyPlaying}');
+      debugPrint('reportProgress: $itemId at ${pos.inSeconds}s ($ticks ticks), paused: ${!_currentlyPlaying}');
       await widget.client.reportPlaybackProgress(
         widget.item,
         position: pos,
@@ -664,7 +664,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
   }
 
   Future<void> _showAudioTracks(Player player) async {
-    await showModalBottomSheet<void>(
+    await showAdaptiveSheet<void>(
       context: context,
       backgroundColor: AppColors.panel,
       builder: (context) => StreamBuilder<Track>(
@@ -698,7 +698,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
   }
 
   Future<void> _showSubtitleTracks(Player player) async {
-    await showModalBottomSheet<void>(
+    await showAdaptiveSheet<void>(
       context: context,
       backgroundColor: AppColors.panel,
       builder: (context) => StreamBuilder<Track>(
@@ -738,7 +738,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
     final tracks = await nc.getAvailableAudioTracks();
     if (!mounted || tracks.isEmpty) return;
     if (!context.mounted) return;
-    await showModalBottomSheet<void>(
+    await showAdaptiveSheet<void>(
       context: context,
       backgroundColor: AppColors.panel,
       builder: (context) => NativeAudioTrackSheet(
@@ -759,7 +759,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
     final tracks = await nc.getAvailableSubtitleTracks();
     if (!mounted || tracks.isEmpty) return;
     if (!context.mounted) return;
-    await showModalBottomSheet<void>(
+    await showAdaptiveSheet<void>(
       context: context,
       backgroundColor: AppColors.panel,
       builder: (context) => NativeSubtitleTrackSheet(

@@ -62,19 +62,18 @@ class _ItemScreenState extends State<ItemScreen> {
     if (!mounted) {
       return;
     }
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => PlayerScreen(
-          client: widget.client,
-          item: playableItem,
-          audioStreamIndex: item.id == widget.item.id
-              ? _selectedAudioStreamIndex
-              : null,
-          subtitleStreamIndex: item.id == widget.item.id
-              ? _selectedSubtitleStreamIndex
-              : null,
-        ),
+    Navigator.of(context).pushAdaptive<void>(
+      builder: (_) => PlayerScreen(
+        client: widget.client,
+        item: playableItem,
+        audioStreamIndex: item.id == widget.item.id
+            ? _selectedAudioStreamIndex
+            : null,
+        subtitleStreamIndex: item.id == widget.item.id
+            ? _selectedSubtitleStreamIndex
+            : null,
       ),
+      name: '/player/${playableItem.id}',
     );
   }
 
@@ -374,10 +373,9 @@ class SimilarSection extends StatelessWidget {
                   item: item,
                   imageUrl: client.imageUrl(item),
                   onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => ItemScreen(client: client, item: item),
-                      ),
+                    Navigator.of(context).pushAdaptive<void>(
+                      builder: (_) => ItemScreen(client: client, item: item),
+                      name: '/item/${item.id}',
                     );
                   },
                 ),
@@ -464,11 +462,10 @@ class ChildrenSection extends StatelessWidget {
                 item: child,
                 onTap: () => child.isPlayable
                     ? onPlayableTap(child)
-                    : Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              ItemScreen(client: client, item: child),
-                        ),
+                    : Navigator.of(context).pushAdaptive<void>(
+                        builder: (_) =>
+                            ItemScreen(client: client, item: child),
+                        name: '/item/${child.id}',
                       ),
               );
             },
@@ -537,10 +534,9 @@ class SeasonCard extends StatelessWidget {
       item: item,
       imageUrl: client.imageUrl(item, width: 360),
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => ItemScreen(client: client, item: item),
-          ),
+        Navigator.of(context).pushAdaptive<void>(
+          builder: (_) => ItemScreen(client: client, item: item),
+          name: '/item/${item.id}',
         );
       },
     );
