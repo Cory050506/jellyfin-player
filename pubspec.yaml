@@ -51,6 +51,8 @@ dependencies:
   tray_manager: any
   screen_retriever: any
   protocol_handler: any
+  touch_bar: any
+  mac_menu_bar: any
 
 dev_dependencies:
   flutter_test:

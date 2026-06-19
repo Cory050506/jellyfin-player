@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +26,7 @@ part 'src/models.dart';
 part 'src/services/app_settings_store.dart';
 part 'src/services/jellyfin_client.dart';
 part 'src/services/native_features.dart';
+part 'src/services/macos_touchbar.dart';
 part 'src/utils.dart';
 part 'src/widgets/adaptive_controls.dart';
 part 'src/widgets/adaptive_navigation.dart';
