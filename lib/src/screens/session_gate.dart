@@ -23,14 +23,14 @@ class _SessionGateState extends State<SessionGate> {
         if (session == null) {
           return LoginScreen(onSignedIn: _openHome);
         }
-        return HomeScreen(session: session, onSignedOut: _signOut);
+        return AdaptiveAppShell(session: session, onSignedOut: _signOut);
       },
     );
   }
 
   void _openHome(JellyfinSession session) {
     Navigator.of(context).pushReplacementAdaptive<void, void>(
-      builder: (_) => HomeScreen(session: session, onSignedOut: _signOut),
+      builder: (_) => AdaptiveAppShell(session: session, onSignedOut: _signOut),
       name: '/home',
     );
   }
