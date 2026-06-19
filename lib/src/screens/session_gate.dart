@@ -11,6 +11,27 @@ class _SessionGateState extends State<SessionGate> {
   late final Future<JellyfinSession?> _sessionFuture = SessionStore.load();
 
   @override
+  void initState() {
+    super.initState();
+    _initializeNativeFeatures();
+  }
+
+  Future<void> _initializeNativeFeatures() async {
+    // Initialize native features (hotkeys, tray, protocol handler, etc.)
+    await NativeFeatures().initialize(
+      onTrayExit: () {
+        // Handle tray exit
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      onTrayShow: () {
+        // Handle tray show
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return FutureBuilder<JellyfinSession?>(
       future: _sessionFuture,

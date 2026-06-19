@@ -46,6 +46,11 @@ dependencies:
   cupertino_native: ^0.1.1
   fluent_ui: ^4.15.1
   macos_ui: ^2.2.2
+  hotkey_manager: any
+  flutter_acrylic: any
+  tray_manager: any
+  screen_retriever: any
+  protocol_handler: any
 
 dev_dependencies:
   flutter_test:
