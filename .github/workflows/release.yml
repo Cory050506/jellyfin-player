@@ -42,15 +42,16 @@ jobs:
 
       - name: Sign app
         run: |
-          APP="build/macos/Build/Products/Release/jellyfin_player.app"
-          # Sign with self-signed cert (identity name set during cert creation)
+          APP=$(find build/macos/Build/Products/Release -name "*.app" -maxdepth 1 | head -1)
+          echo "Signing $APP"
           codesign --deep --force --sign "HQFin" "$APP" || \
           codesign --deep --force --sign "-" "$APP"
 
       - name: Package as zip (Sparkle requires zip for macOS)
         run: |
           cd build/macos/Build/Products/Release
-          zip -r --symlinks jellyfin-player-macos.zip jellyfin_player.app
+          APP=$(find . -name "*.app" -maxdepth 1 | head -1 | sed 's|./||')
+          zip -r --symlinks hqfin-macos.zip "$APP"
 
       - name: Sign update with Sparkle EdDSA key
         id: sign
@@ -59,16 +60,16 @@ jobs:
         run: |
           echo "$SPARKLE_PRIVATE_KEY" > /tmp/sparkle_private.pem
           SIGNATURE=$(openssl pkeyutl -sign -inkey /tmp/sparkle_private.pem \
-            -rawin -in build/macos/Build/Products/Release/jellyfin-player-macos.zip \
+            -rawin -in build/macos/Build/Products/Release/hqfin-macos.zip \
             | base64)
-          SIZE=$(stat -f%z build/macos/Build/Products/Release/jellyfin-player-macos.zip)
+          SIZE=$(stat -f%z build/macos/Build/Products/Release/hqfin-macos.zip)
           echo "signature=$SIGNATURE" >> $GITHUB_OUTPUT
           echo "size=$SIZE" >> $GITHUB_OUTPUT
 
       - uses: actions/upload-artifact@v7
         with:
           name: macos
-          path: build/macos/Build/Products/Release/jellyfin-player-macos.zip
+          path: build/macos/Build/Products/Release/hqfin-macos.zip
 
   # ── iOS ────────────────────────────────────────────────────────────────────
   build-ios:
@@ -188,7 +189,7 @@ jobs:
           name: ${{ steps.version.outputs.tag }}
           make_latest: true
           files: |
-            artifacts/macos/jellyfin-player-macos.zip
+            artifacts/macos/hqfin-macos.zip
             artifacts/ios/jellyfin-player.ipa
             artifacts/android/app-release.apk
             artifacts/windows/jellyfin-player-windows.zip
@@ -201,7 +202,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           DATE=$(date -u "+%a, %d %b %Y %H:%M:%S +0000")
-          DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/jellyfin-player-macos.zip"
+          DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/hqfin-macos.zip"
           cat > appcast.xml << EOF
           <?xml version="1.0" encoding="utf-8"?>
           <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
