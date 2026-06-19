@@ -213,6 +213,11 @@ class _MediaTileState extends State<MediaTile> {
                           Image.network(
                             widget.imageUrl.toString(),
                             fit: BoxFit.cover,
+                            frameBuilder: widget.item.primaryBlurHash != null
+                                ? (ctx, child, frame, loaded) => frame == null
+                                    ? BlurHash(hash: widget.item.primaryBlurHash!)
+                                    : child
+                                : null,
                             errorBuilder: (_, _, _) => const DecoratedBox(
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(

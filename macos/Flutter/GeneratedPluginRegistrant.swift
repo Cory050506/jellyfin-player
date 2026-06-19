@@ -6,7 +6,9 @@ import FlutterMacOS
 import Foundation
 
 import appkit_ui_element_colors
+import auto_updater_macos
 import cupertino_native
+import flutter_window_close
 import hotkey_manager_macos
 import mac_menu_bar
 import macos_ui
@@ -24,7 +26,9 @@ import window_manager
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   AppkitUiElementColorsPlugin.register(with: registry.registrar(forPlugin: "AppkitUiElementColorsPlugin"))
+  AutoUpdaterMacosPlugin.register(with: registry.registrar(forPlugin: "AutoUpdaterMacosPlugin"))
   CupertinoNativePlugin.register(with: registry.registrar(forPlugin: "CupertinoNativePlugin"))
+  FlutterWindowClosePlugin.register(with: registry.registrar(forPlugin: "FlutterWindowClosePlugin"))
   HotkeyManagerMacosPlugin.register(with: registry.registrar(forPlugin: "HotkeyManagerMacosPlugin"))
   MacMenuBarPlugin.register(with: registry.registrar(forPlugin: "MacMenuBarPlugin"))
   MacOSUiPlugin.register(with: registry.registrar(forPlugin: "MacOSUiPlugin"))

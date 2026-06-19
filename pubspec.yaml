@@ -56,6 +56,13 @@ dependencies:
   native_glass_navbar:
     git:
       url: https://github.com/TechSupportz/native_glass_navbar.git
+  auto_updater: any
+  package_info_plus: any
+  launch_at_startup: any
+  flutter_window_close: any
+  windows_taskbar: any
+  flutter_blurhash: any
+  draggable_scrollbar: any
 
 dev_dependencies:
   flutter_test:

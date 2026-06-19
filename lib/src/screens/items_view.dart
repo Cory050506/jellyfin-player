@@ -1,6 +1,6 @@
 part of '../../main.dart';
 
-class ItemsView extends StatelessWidget {
+class ItemsView extends StatefulWidget {
   const ItemsView({
     super.key,
     required this.client,
@@ -15,9 +15,22 @@ class ItemsView extends StatelessWidget {
   final VoidCallback? onRefresh;
 
   @override
+  State<ItemsView> createState() => _ItemsViewState();
+}
+
+class _ItemsViewState extends State<ItemsView> {
+  final _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final future = itemsFuture;
-    if (library == null || future == null) {
+    final future = widget.itemsFuture;
+    if (widget.library == null || future == null) {
       return const EmptyPane(
         icon: Icons.movie_filter_rounded,
         title: 'Pick a library',
@@ -37,61 +50,69 @@ class ItemsView extends StatelessWidget {
         if (items.isEmpty) {
           return EmptyPane(
             icon: Icons.folder_open_rounded,
-            title: '${library!.name} is empty',
+            title: '${widget.library!.name} is empty',
             subtitle: 'Nothing was returned from this library.',
           );
         }
-        return CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(24, _isMacOS ? 36 : 16, 24, 8),
-              sliver: SliverToBoxAdapter(
-                child: Row(
-                  children: [
-                    Text(
-                      library!.name,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w800,
+        final screenWidth = MediaQuery.of(context).size.width;
+        final isTV = defaultTargetPlatform == TargetPlatform.android &&
+            screenWidth >= 960;
+        return Scrollbar(
+          controller: _scrollController,
+          thumbVisibility: true,
+          child: CustomScrollView(
+            controller: _scrollController,
+            slivers: [
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(24, _isMacOS ? 36 : 16, 24, 8),
+                sliver: SliverToBoxAdapter(
+                  child: Row(
+                    children: [
+                      Text(
+                        widget.library!.name,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      '${items.length} items',
-                      style: const TextStyle(color: Colors.white54),
-                    ),
-                  ],
+                      const SizedBox(width: 10),
+                      Text(
+                        '${items.length} items',
+                        style: const TextStyle(color: Colors.white54),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
-              sliver: SliverGrid.builder(
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 214,
-                  mainAxisSpacing: 18,
-                  crossAxisSpacing: 18,
-                  childAspectRatio: 0.6,
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
+                sliver: SliverGrid.builder(
+                  gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: isTV ? 320 : 214,
+                    mainAxisSpacing: 18,
+                    crossAxisSpacing: 18,
+                    childAspectRatio: isTV ? 0.58 : 0.6,
+                  ),
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    final item = items[index];
+                    return MediaTile(
+                      item: item,
+                      imageUrl: widget.client.imageUrl(item),
+                      onTap: () {
+                        Navigator.of(context)
+                            .pushAdaptive<void>(
+                              builder: (_) =>
+                                  ItemScreen(client: widget.client, item: item),
+                              name: '/item/${item.id}',
+                            )
+                            .then((_) => widget.onRefresh?.call());
+                      },
+                    );
+                  },
                 ),
-                itemCount: items.length,
-                itemBuilder: (context, index) {
-                  final item = items[index];
-                  return MediaTile(
-                    item: item,
-                    imageUrl: client.imageUrl(item),
-                    onTap: () {
-                      Navigator.of(context)
-                          .pushAdaptive<void>(
-                            builder: (_) =>
-                                ItemScreen(client: client, item: item),
-                            name: '/item/${item.id}',
-                          )
-                          .then((_) => onRefresh?.call());
-                    },
-                  );
-                },
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );

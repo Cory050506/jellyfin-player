@@ -12,11 +12,21 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   late Future<AppSettings> _settingsFuture;
   AppSettings? _settings;
+  PackageInfo? _packageInfo;
+  bool _launchAtStartup = false;
 
   @override
   void initState() {
     super.initState();
     _settingsFuture = _load();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) setState(() => _packageInfo = info);
+    });
+    if (isDesktopPlatform) {
+      launchAtStartup.isEnabled().then((enabled) {
+        if (mounted) setState(() => _launchAtStartup = enabled);
+      });
+    }
   }
 
   Future<AppSettings> _load() async {
@@ -239,10 +249,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ],
                 ),
               ],
+              if (isDesktopPlatform) ...[
+                const SizedBox(height: 18),
+                SettingsSection(
+                  title: 'System',
+                  children: [
+                    SettingSwitchTile(
+                      value: _launchAtStartup,
+                      onChanged: (value) async {
+                        if (value) {
+                          await launchAtStartup.enable();
+                        } else {
+                          await launchAtStartup.disable();
+                        }
+                        setState(() => _launchAtStartup = value);
+                      },
+                      icon: Icons.start_rounded,
+                      title: 'Launch at login',
+                      subtitle: 'Start the app automatically when you log in.',
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 18),
               SettingsSection(
                 title: 'About this build',
                 children: [
+                  ListTile(
+                    leading: const Icon(Icons.info_outline_rounded),
+                    title: const Text('Version'),
+                    subtitle: Text(_packageInfo != null
+                        ? '${_packageInfo!.version} (${_packageInfo!.buildNumber})'
+                        : '—'),
+                  ),
+                  if (defaultTargetPlatform == TargetPlatform.macOS ||
+                      defaultTargetPlatform == TargetPlatform.windows)
+                    ListTile(
+                      leading: const Icon(Icons.system_update_rounded),
+                      title: const Text('Check for updates'),
+                      subtitle: const Text('Checks the update feed for a newer version.'),
+                      trailing: AdaptiveButton(
+                        label: 'Check',
+                        filled: false,
+                        shrinkWrap: true,
+                        onPressed: () => autoUpdater.checkForUpdates(),
+                      ),
+                    ),
                   ListTile(
                     leading: const Icon(Icons.restore_rounded),
                     title: const Text('Reset settings'),

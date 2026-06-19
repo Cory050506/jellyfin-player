@@ -513,6 +513,9 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
     if (_isFullscreen) {
       unawaited(windowManager.setFullScreen(false));
     }
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      unawaited(WindowsTaskbar.resetThumbnailToolbar());
+    }
     super.dispose();
   }
 
@@ -536,6 +539,16 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
         position: pos,
         paused: !_currentlyPlaying,
       );
+      if (defaultTargetPlatform == TargetPlatform.windows && !_useNativePlayer) {
+        final duration = _player?.state.duration ?? Duration.zero;
+        if (duration.inSeconds > 0) {
+          final progress = pos.inMilliseconds / duration.inMilliseconds;
+          await WindowsTaskbar.setProgress(
+            (progress * 100).round().clamp(0, 100),
+            100,
+          );
+        }
+      }
       // Auto-play next episode: trigger countdown when within 30s of end.
       if (!_useNativePlayer &&
           widget.nextEpisode != null &&

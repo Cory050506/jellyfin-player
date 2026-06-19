@@ -20,6 +20,12 @@ import 'package:screen_retriever/screen_retriever.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:protocol_handler/protocol_handler.dart';
 import 'package:native_glass_navbar/native_glass_navbar.dart';
+import 'package:auto_updater/auto_updater.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:launch_at_startup/launch_at_startup.dart';
+import 'package:flutter_window_close/flutter_window_close.dart';
+import 'package:windows_taskbar/windows_taskbar.dart';
+import 'package:flutter_blurhash/flutter_blurhash.dart';
 
 part 'src/app.dart';
 part 'src/models.dart';
@@ -52,6 +58,17 @@ void main() async {
   if (isDesktopPlatform) {
     await windowManager.ensureInitialized();
     _initializeAcrylic();
+  }
+  if (isDesktopPlatform) {
+    final info = await PackageInfo.fromPlatform();
+    launchAtStartup.setup(
+      appName: info.appName,
+      appPath: Platform.resolvedExecutable,
+    );
+    FlutterWindowClose.setWindowShouldCloseHandler(() async {
+      // Allow close immediately — no blocking dialog needed
+      return true;
+    });
   }
   runApp(const JellyfinPlayerApp());
 }

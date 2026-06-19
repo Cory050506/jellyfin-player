@@ -8,7 +8,12 @@ class JellyfinPlayerApp extends StatelessWidget {
     return ValueListenableBuilder<Color>(
       valueListenable: AppColors.accentNotifier,
       builder: (context, accent, _) {
-        return MaterialApp(
+        return Shortcuts(
+          shortcuts: {
+            const SingleActivator(LogicalKeyboardKey.select): const ActivateIntent(),
+            const SingleActivator(LogicalKeyboardKey.gameButtonA): const ActivateIntent(),
+          },
+          child: MaterialApp(
           title: 'Jellyfin Player',
           debugShowCheckedModeBanner: false,
           theme: ThemeData(
@@ -47,6 +52,7 @@ class JellyfinPlayerApp extends StatelessWidget {
             ),
           ),
           home: const SessionGate(),
+        ),
         );
       },
     );

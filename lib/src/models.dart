@@ -106,6 +106,8 @@ class JellyfinItem {
     required this.playbackPositionTicks,
     required this.mediaStreams,
     required this.people,
+    this.primaryBlurHash,
+    this.backdropBlurHash,
   });
 
   final String id;
@@ -123,6 +125,8 @@ class JellyfinItem {
   final int playbackPositionTicks;
   final List<JellyfinMediaStream> mediaStreams;
   final List<JellyfinPerson> people;
+  final String? primaryBlurHash;
+  final String? backdropBlurHash;
 
   bool get isPlayable =>
       type == 'Movie' || type == 'Episode' || type == 'Video';
@@ -183,6 +187,11 @@ class JellyfinItem {
   static JellyfinItem fromJson(Map<String, dynamic> json) {
     final tags = json['ImageTags'] as Map<String, dynamic>? ?? {};
     final backdropTags = json['BackdropImageTags'] as List<dynamic>? ?? [];
+    final blurHashes = json['ImageBlurHashes'] as Map<String, dynamic>? ?? {};
+    final primaryBlurhashMap = blurHashes['Primary'] as Map<String, dynamic>? ?? {};
+    final backdropBlurhashMap = blurHashes['Backdrop'] as Map<String, dynamic>? ?? {};
+    final primaryTag = tags['Primary'] as String?;
+    final backdropTag2 = backdropTags.isEmpty ? null : backdropTags.first as String?;
     final mediaSources = json['MediaSources'] as List<dynamic>? ?? [];
     final userData = json['UserData'] as Map<String, dynamic>? ?? {};
     final streams = mediaSources.isEmpty
@@ -216,6 +225,8 @@ class JellyfinItem {
             (person) => JellyfinPerson.fromJson(person as Map<String, dynamic>),
           )
           .toList(),
+      primaryBlurHash: primaryTag != null ? primaryBlurhashMap[primaryTag] as String? : null,
+      backdropBlurHash: backdropTag2 != null ? backdropBlurhashMap[backdropTag2] as String? : null,
     );
   }
 }

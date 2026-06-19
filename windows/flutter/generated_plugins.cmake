@@ -3,7 +3,9 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  auto_updater_windows
   flutter_acrylic
+  flutter_window_close
   hotkey_manager_windows
   media_kit_libs_windows_video
   media_kit_video
@@ -11,6 +13,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   screen_retriever_windows
   tray_manager
   window_manager
+  windows_taskbar
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
