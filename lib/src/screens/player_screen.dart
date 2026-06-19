@@ -537,10 +537,14 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       child: IconButton.filledTonal(
                         tooltip: 'Close player',
                         onPressed: () async {
-                          // Exit fullscreen first, then close
-                          try {
-                            await _nativeController?.exitFullScreen();
-                          } catch (_) {}
+                          // Exit fullscreen, report stopped, and pop the entire player screen
+                          if (_nativeController != null) {
+                            try {
+                              await _nativeController!.exitFullScreen();
+                              // Wait a moment for fullscreen to fully exit
+                              await Future<void>.delayed(const Duration(milliseconds: 100));
+                            } catch (_) {}
+                          }
                           await _reportStopped();
                           if (context.mounted) {
                             Navigator.of(context).pop();
