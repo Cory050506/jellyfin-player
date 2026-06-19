@@ -437,54 +437,57 @@ class _LibraryEditorSheetState extends State<LibraryEditorSheet> {
             ),
             const SizedBox(height: 8),
             Flexible(
-              child: ReorderableListView.builder(
-                shrinkWrap: true,
-                itemCount: _order.length,
-                onReorderItem: (oldIndex, newIndex) {
-                  setState(() {
-                    final item = _order.removeAt(oldIndex);
-                    _order.insert(newIndex, item);
-                  });
-                },
-                itemBuilder: (context, index) {
-                  final lib = _order[index];
-                  final hidden = _hidden.contains(lib.id);
-                  return ListTile(
-                    key: ValueKey(lib.id),
-                    leading: Icon(iconForLibrary(lib.collectionType)),
-                    title: Text(
-                      lib.name,
-                      style: TextStyle(
-                        color: hidden ? Colors.white38 : Colors.white,
+              child: Material(
+                color: Colors.transparent,
+                child: ReorderableListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _order.length,
+                  onReorderItem: (oldIndex, newIndex) {
+                    setState(() {
+                      final item = _order.removeAt(oldIndex);
+                      _order.insert(newIndex, item);
+                    });
+                  },
+                  itemBuilder: (context, index) {
+                    final lib = _order[index];
+                    final hidden = _hidden.contains(lib.id);
+                    return ListTile(
+                      key: ValueKey(lib.id),
+                      leading: Icon(iconForLibrary(lib.collectionType)),
+                      title: Text(
+                        lib.name,
+                        style: TextStyle(
+                          color: hidden ? Colors.white38 : Colors.white,
+                        ),
                       ),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          tooltip: hidden ? 'Show' : 'Hide',
-                          icon: Icon(
-                            hidden
-                                ? Icons.visibility_off_rounded
-                                : Icons.visibility_rounded,
-                            color: hidden ? Colors.white38 : AppColors.cyan,
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            tooltip: hidden ? 'Show' : 'Hide',
+                            icon: Icon(
+                              hidden
+                                  ? Icons.visibility_off_rounded
+                                  : Icons.visibility_rounded,
+                              color: hidden ? Colors.white38 : AppColors.cyan,
+                            ),
+                            onPressed: () => setState(() {
+                              if (hidden) {
+                                _hidden.remove(lib.id);
+                              } else {
+                                _hidden.add(lib.id);
+                              }
+                            }),
                           ),
-                          onPressed: () => setState(() {
-                            if (hidden) {
-                              _hidden.remove(lib.id);
-                            } else {
-                              _hidden.add(lib.id);
-                            }
-                          }),
-                        ),
-                        const Icon(
-                          Icons.drag_handle_rounded,
-                          color: Colors.white38,
-                        ),
-                      ],
-                    ),
-                  );
-                },
+                          const Icon(
+                            Icons.drag_handle_rounded,
+                            color: Colors.white38,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
           ],
