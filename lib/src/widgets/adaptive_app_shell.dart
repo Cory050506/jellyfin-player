@@ -801,8 +801,8 @@ class _WindowsShellState extends State<_WindowsShell> {
   }
 }
 
-/// Android app with Material navigation
-class _AndroidShell extends StatelessWidget {
+/// Android app with Material 3 bottom nav bar
+class _AndroidShell extends StatefulWidget {
   const _AndroidShell({
     required this.session,
     required this.onSignedOut,
@@ -812,10 +812,172 @@ class _AndroidShell extends StatelessWidget {
   final Future<void> Function() onSignedOut;
 
   @override
+  State<_AndroidShell> createState() => _AndroidShellState();
+}
+
+class _AndroidShellState extends State<_AndroidShell> {
+  late final JellyfinClient _client = JellyfinClient(session: widget.session);
+  Future<List<JellyfinLibrary>>? _librariesFuture;
+  List<JellyfinLibrary> _allLibraries = const [];
+  AppSettings _settings = AppSettings.defaults;
+  int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _bootstrap();
+  }
+
+  Future<void> _bootstrap() async {
+    _settings = await AppSettingsStore.load();
+    if (!mounted) return;
+    setState(() => _librariesFuture = _loadLibraries());
+  }
+
+  List<JellyfinLibrary> _visible(List<JellyfinLibrary> all) {
+    final hidden = _settings.hiddenLibraries.toSet();
+    final byId = {for (final l in all) l.id: l};
+    final result = <JellyfinLibrary>[];
+    for (final id in _settings.libraryOrder) {
+      final lib = byId[id];
+      if (lib != null && !hidden.contains(id)) result.add(lib);
+    }
+    for (final l in all) {
+      if (!_settings.libraryOrder.contains(l.id) && !hidden.contains(l.id)) result.add(l);
+    }
+    return result;
+  }
+
+  List<JellyfinLibrary> _navLibs(List<JellyfinLibrary> all) {
+    final visible = _visible(all);
+    final pinned = _settings.pinnedNavLibraries;
+    if (pinned.isEmpty) return visible.take(4).toList();
+    final byId = {for (final l in visible) l.id: l};
+    return pinned.map((id) => byId[id]).whereType<JellyfinLibrary>().take(4).toList();
+  }
+
+  Future<List<JellyfinLibrary>> _loadLibraries() async {
+    final libraries = await _client.getLibraries();
+    _allLibraries = libraries;
+    return libraries;
+  }
+
+  Future<void> _saveSettings(AppSettings next) async {
+    setState(() => _settings = next);
+    await AppSettingsStore.save(next);
+  }
+
+  Future<void> _editLibraries() async {
+    final result = await showAdaptiveSheet<({List<String> order, List<String> hidden})>(
+      context: context,
+      backgroundColor: AppColors.panel,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => LibraryEditorSheet(
+        libraries: _visible(_allLibraries) +
+            _allLibraries.where((l) => _settings.hiddenLibraries.contains(l.id)).toList(),
+        hidden: _settings.hiddenLibraries,
+      ),
+    );
+    if (result == null) return;
+    await _saveSettings(_settings.copyWith(
+      libraryOrder: result.order,
+      hiddenLibraries: result.hidden,
+    ));
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return HomeScreen(
-      session: session,
-      onSignedOut: onSignedOut,
+    final accent = AppColors.accent;
+    return FutureBuilder<List<JellyfinLibrary>>(
+      future: _librariesFuture,
+      builder: (context, snapshot) {
+        if (_librariesFuture == null || snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: ErrorPane(
+              message: friendlyError(snapshot.error),
+              onRetry: () => setState(() => _librariesFuture = _loadLibraries()),
+            ),
+          );
+        }
+        final all = snapshot.data ?? [];
+        if (all.isEmpty) {
+          return const Scaffold(
+            body: EmptyPane(
+              icon: Icons.video_library_rounded,
+              title: 'No libraries found',
+              subtitle: 'This user does not have visible media libraries.',
+            ),
+          );
+        }
+
+        final tabLibs = _navLibs(all);
+
+        final pages = [
+          for (final lib in tabLibs)
+            ItemsView(
+              client: _client,
+              library: lib,
+              itemsFuture: _client.getItems(lib),
+              onRefresh: () {},
+            ),
+          // Settings page
+          Scaffold(
+            appBar: AppBar(title: const Text('Settings')),
+            body: ListView(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.grid_view_rounded),
+                  title: const Text('Edit Libraries'),
+                  subtitle: const Text('Show, hide, and reorder'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _editLibraries,
+                ),
+                ListTile(
+                  leading: const Icon(Icons.tune_rounded),
+                  title: const Text('Playback & Display'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).pushAdaptive<void>(
+                    builder: (_) => SettingsScreen(session: widget.session),
+                    name: '/settings',
+                  ),
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+                  title: const Text('Sign Out', style: TextStyle(color: Colors.redAccent)),
+                  onTap: widget.onSignedOut,
+                ),
+              ],
+            ),
+          ),
+        ];
+
+        return Scaffold(
+          extendBody: true,
+          body: IndexedStack(index: _selectedIndex, children: pages),
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (i) => setState(() => _selectedIndex = i),
+            indicatorColor: accent.withValues(alpha: 0.2),
+            backgroundColor: AppColors.background.withValues(alpha: 0.92),
+            destinations: [
+              for (final lib in tabLibs)
+                NavigationDestination(
+                  icon: Icon(iconForLibrary(lib.collectionType)),
+                  label: lib.name,
+                ),
+              const NavigationDestination(
+                icon: Icon(Icons.settings_rounded),
+                label: 'Settings',
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

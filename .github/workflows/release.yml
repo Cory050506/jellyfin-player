@@ -136,6 +136,11 @@ jobs:
 
       - run: flutter pub get
 
+      - name: Patch protocol_handler_android compileSdk (33 → 36)
+        run: |
+          find ~/.pub-cache -path "*/protocol_handler_android*/build.gradle" \
+            -exec sed -i 's/compileSdkVersion 33/compileSdkVersion 36/g' {} +
+
       - name: Build APK
         run: flutter build apk --release
 

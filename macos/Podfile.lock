@@ -1,38 +1,79 @@
 PODS:
+  - auto_updater_macos (0.0.1):
+    - FlutterMacOS
+    - Sparkle
   - cupertino_native (0.0.1):
     - FlutterMacOS
   - FlutterMacOS (1.0.0)
+  - HotKey (0.2.1)
+  - hotkey_manager_macos (0.0.1):
+    - FlutterMacOS
+    - HotKey
+  - mac_menu_bar (0.0.1):
+    - FlutterMacOS
   - media_kit_libs_macos_video (1.0.4):
     - FlutterMacOS
   - media_kit_video (0.0.1):
+    - FlutterMacOS
+  - protocol_handler_macos (0.0.1):
+    - FlutterMacOS
+  - Sparkle (2.9.3)
+  - touch_bar_macos (0.0.1):
     - FlutterMacOS
   - window_manager (0.2.0):
     - FlutterMacOS
 
 DEPENDENCIES:
+  - auto_updater_macos (from `Flutter/ephemeral/.symlinks/plugins/auto_updater_macos/macos`)
   - cupertino_native (from `Flutter/ephemeral/.symlinks/plugins/cupertino_native/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
+  - hotkey_manager_macos (from `Flutter/ephemeral/.symlinks/plugins/hotkey_manager_macos/macos`)
+  - mac_menu_bar (from `Flutter/ephemeral/.symlinks/plugins/mac_menu_bar/macos`)
   - media_kit_libs_macos_video (from `Flutter/ephemeral/.symlinks/plugins/media_kit_libs_macos_video/macos`)
   - media_kit_video (from `Flutter/ephemeral/.symlinks/plugins/media_kit_video/macos`)
+  - protocol_handler_macos (from `Flutter/ephemeral/.symlinks/plugins/protocol_handler_macos/macos`)
+  - touch_bar_macos (from `Flutter/ephemeral/.symlinks/plugins/touch_bar_macos/macos`)
   - window_manager (from `Flutter/ephemeral/.symlinks/plugins/window_manager/macos`)
 
+SPEC REPOS:
+  trunk:
+    - HotKey
+    - Sparkle
+
 EXTERNAL SOURCES:
+  auto_updater_macos:
+    :path: Flutter/ephemeral/.symlinks/plugins/auto_updater_macos/macos
   cupertino_native:
     :path: Flutter/ephemeral/.symlinks/plugins/cupertino_native/macos
   FlutterMacOS:
     :path: Flutter/ephemeral
+  hotkey_manager_macos:
+    :path: Flutter/ephemeral/.symlinks/plugins/hotkey_manager_macos/macos
+  mac_menu_bar:
+    :path: Flutter/ephemeral/.symlinks/plugins/mac_menu_bar/macos
   media_kit_libs_macos_video:
     :path: Flutter/ephemeral/.symlinks/plugins/media_kit_libs_macos_video/macos
   media_kit_video:
     :path: Flutter/ephemeral/.symlinks/plugins/media_kit_video/macos
+  protocol_handler_macos:
+    :path: Flutter/ephemeral/.symlinks/plugins/protocol_handler_macos/macos
+  touch_bar_macos:
+    :path: Flutter/ephemeral/.symlinks/plugins/touch_bar_macos/macos
   window_manager:
     :path: Flutter/ephemeral/.symlinks/plugins/window_manager/macos
 
 SPEC CHECKSUMS:
+  auto_updater_macos: 3a42f1a06be6981f1a18be37e6e7bf86aa732118
   cupertino_native: 69ee8a8bac1c467f04256be9d78899a180287d9a
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
+  HotKey: 400beb7caa29054ea8d864c96f5ba7e5b4852277
+  hotkey_manager_macos: a4317849af96d2430fa89944d3c58977ca089fbe
+  mac_menu_bar: a3c28fe1fd1bf61cf881ceaa51dd592775bca300
   media_kit_libs_macos_video: 85a23e549b5f480e72cae3e5634b5514bc692f65
   media_kit_video: fa6564e3799a0a28bff39442334817088b7ca758
+  protocol_handler_macos: f9cd7b13bcaf6b0425f7410cbe52376cb843a936
+  Sparkle: 39dbdf28637f6056fbf5ee6494bdbfae54f49f41
+  touch_bar_macos: 4c62c25dcec3786c7bbfc1ca5be088b40fe593d9
   window_manager: 1d01fa7ac65a6e6f83b965471b1a7fdd3f06166c
 
 PODFILE CHECKSUM: c52fe7ffa013893eaa62fddd8de0c527b5bf99e8

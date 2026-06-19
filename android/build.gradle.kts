@@ -19,14 +19,6 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
-// Force all plugins to compile against SDK 36 so their androidx deps resolve.
-subprojects {
-    afterEvaluate {
-        extensions.findByName("android")?.let {
-            (it as com.android.build.gradle.BaseExtension).compileSdkVersion(36)
-        }
-    }
-}
 
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
