@@ -189,8 +189,8 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
         // Brief delay to ensure video is ready before playing
         await Future<void>.delayed(const Duration(milliseconds: 200));
         await ctrl.play();
-        // Auto-enter native fullscreen on iOS for Liquid Glass controls.
-        await ctrl.enterFullScreen();
+        // Don't auto-enter fullscreen - let PiP work for background playback
+        // User can tap fullscreen button if they want the Liquid Glass controls
         unawaited(widget.client.reportPlaybackStart(widget.item));
         _progressTimer = Timer.periodic(
           const Duration(seconds: 10),
