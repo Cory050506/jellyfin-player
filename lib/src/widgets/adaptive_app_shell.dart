@@ -51,10 +51,7 @@ class _AdaptiveAppShellState extends State<AdaptiveAppShell> {
 
 /// Native iOS app with bottom tab bar (CupertinoTabScaffold)
 class _NativeIOSShell extends StatefulWidget {
-  const _NativeIOSShell({
-    required this.session,
-    required this.onSignedOut,
-  });
+  const _NativeIOSShell({required this.session, required this.onSignedOut});
 
   final JellyfinSession session;
   final Future<void> Function() onSignedOut;
@@ -79,9 +76,8 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
   Future<void> _bootstrap() async {
     _settings = await AppSettingsStore.load();
     if (!mounted) return;
-    setState(() {
-      _librariesFuture = _loadLibraries();
-    });
+    final future = _loadLibraries();
+    setState(() => _librariesFuture = future);
   }
 
   List<JellyfinLibrary> _visible(List<JellyfinLibrary> all) {
@@ -106,7 +102,11 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
     final pinned = _settings.pinnedNavLibraries;
     if (pinned.isEmpty) return visible.take(4).toList();
     final byId = {for (final l in visible) l.id: l};
-    return pinned.map((id) => byId[id]).whereType<JellyfinLibrary>().take(4).toList();
+    return pinned
+        .map((id) => byId[id])
+        .whereType<JellyfinLibrary>()
+        .take(4)
+        .toList();
   }
 
   Future<List<JellyfinLibrary>> _loadLibraries() async {
@@ -121,19 +121,21 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
   }
 
   Future<void> _editLibraries() async {
-    final result = await showAdaptiveSheet<({List<String> order, List<String> hidden})>(
-      context: context,
-      backgroundColor: AppColors.panel,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => LibraryEditorSheet(
-        libraries: _visible(_allLibraries) +
-            _allLibraries
-                .where((l) => _settings.hiddenLibraries.contains(l.id))
-                .toList(),
-        hidden: _settings.hiddenLibraries,
-      ),
-    );
+    final result =
+        await showAdaptiveSheet<({List<String> order, List<String> hidden})>(
+          context: context,
+          backgroundColor: AppColors.panel,
+          isScrollControlled: true,
+          showDragHandle: true,
+          builder: (_) => LibraryEditorSheet(
+            libraries:
+                _visible(_allLibraries) +
+                _allLibraries
+                    .where((l) => _settings.hiddenLibraries.contains(l.id))
+                    .toList(),
+            hidden: _settings.hiddenLibraries,
+          ),
+        );
     if (result == null) return;
     await _saveSettings(
       _settings.copyWith(
@@ -237,14 +239,18 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
                     margin: EdgeInsets.zero,
                     children: [
                       cupertino.CupertinoListTile(
-                        leading: const Icon(cupertino.CupertinoIcons.square_grid_2x2),
+                        leading: const Icon(
+                          cupertino.CupertinoIcons.square_grid_2x2,
+                        ),
                         title: const Text('Edit Libraries'),
                         subtitle: const Text('Show, hide, and reorder'),
                         trailing: const cupertino.CupertinoListTileChevron(),
                         onTap: _editLibraries,
                       ),
                       cupertino.CupertinoListTile(
-                        leading: const Icon(cupertino.CupertinoIcons.rectangle_dock),
+                        leading: const Icon(
+                          cupertino.CupertinoIcons.rectangle_dock,
+                        ),
                         title: const Text('Customize Navigation'),
                         subtitle: const Text('Choose up to 4 tabs'),
                         trailing: const cupertino.CupertinoListTileChevron(),
@@ -274,7 +280,8 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
                         trailing: const cupertino.CupertinoListTileChevron(),
                         onTap: () {
                           Navigator.of(context).pushAdaptive<void>(
-                            builder: (_) => SettingsScreen(session: widget.session),
+                            builder: (_) =>
+                                SettingsScreen(session: widget.session),
                             name: '/settings',
                           );
                         },
@@ -304,7 +311,9 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
                         ),
                         title: const Text(
                           'Sign Out',
-                          style: TextStyle(color: cupertino.CupertinoColors.systemRed),
+                          style: TextStyle(
+                            color: cupertino.CupertinoColors.systemRed,
+                          ),
                         ),
                         onTap: widget.onSignedOut,
                       ),
@@ -320,10 +329,7 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
         return Scaffold(
           extendBody: true,
           backgroundColor: AppColors.background,
-          body: IndexedStack(
-            index: _selectedIndex,
-            children: pages,
-          ),
+          body: IndexedStack(index: _selectedIndex, children: pages),
           bottomNavigationBar: NativeGlassNavBar(
             tabs: tabs,
             currentIndex: _selectedIndex,
@@ -354,10 +360,7 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
 
 /// Native macOS app with sidebar navigation (macos_ui)
 class _NativeMacOSShell extends StatefulWidget {
-  const _NativeMacOSShell({
-    required this.session,
-    required this.onSignedOut,
-  });
+  const _NativeMacOSShell({required this.session, required this.onSignedOut});
 
   final JellyfinSession session;
   final Future<void> Function() onSignedOut;
@@ -383,9 +386,8 @@ class _NativeMacOSShellState extends State<_NativeMacOSShell> {
   Future<void> _bootstrap() async {
     _settings = await AppSettingsStore.load();
     if (!mounted) return;
-    setState(() {
-      _librariesFuture = _loadLibraries();
-    });
+    final future = _loadLibraries();
+    setState(() => _librariesFuture = future);
   }
 
   List<JellyfinLibrary> _visible(List<JellyfinLibrary> all) {
@@ -428,19 +430,21 @@ class _NativeMacOSShellState extends State<_NativeMacOSShell> {
   }
 
   Future<void> _editLibraries() async {
-    final result = await showAdaptiveSheet<({List<String> order, List<String> hidden})>(
-      context: context,
-      backgroundColor: AppColors.panel,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => LibraryEditorSheet(
-        libraries: _visible(_allLibraries) +
-            _allLibraries
-                .where((l) => _settings.hiddenLibraries.contains(l.id))
-                .toList(),
-        hidden: _settings.hiddenLibraries,
-      ),
-    );
+    final result =
+        await showAdaptiveSheet<({List<String> order, List<String> hidden})>(
+          context: context,
+          backgroundColor: AppColors.panel,
+          isScrollControlled: true,
+          showDragHandle: true,
+          builder: (_) => LibraryEditorSheet(
+            libraries:
+                _visible(_allLibraries) +
+                _allLibraries
+                    .where((l) => _settings.hiddenLibraries.contains(l.id))
+                    .toList(),
+            hidden: _settings.hiddenLibraries,
+          ),
+        );
     if (result == null) return;
     await _saveSettings(
       _settings.copyWith(
@@ -517,9 +521,8 @@ class _NativeMacOSShellState extends State<_NativeMacOSShell> {
                           const SizedBox(height: 8),
                           Text(
                             'Jellyfin',
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -554,7 +557,8 @@ class _NativeMacOSShellState extends State<_NativeMacOSShell> {
                             label: 'Settings',
                             onPressed: () {
                               Navigator.of(context).pushAdaptive<void>(
-                                builder: (_) => SettingsScreen(session: widget.session),
+                                builder: (_) =>
+                                    SettingsScreen(session: widget.session),
                                 name: '/settings',
                               );
                             },
@@ -595,10 +599,7 @@ class _NativeMacOSShellState extends State<_NativeMacOSShell> {
 
 /// Windows app with sidebar
 class _WindowsShell extends StatefulWidget {
-  const _WindowsShell({
-    required this.session,
-    required this.onSignedOut,
-  });
+  const _WindowsShell({required this.session, required this.onSignedOut});
 
   final JellyfinSession session;
   final Future<void> Function() onSignedOut;
@@ -624,9 +625,8 @@ class _WindowsShellState extends State<_WindowsShell> {
   Future<void> _bootstrap() async {
     _settings = await AppSettingsStore.load();
     if (!mounted) return;
-    setState(() {
-      _librariesFuture = _loadLibraries();
-    });
+    final future = _loadLibraries();
+    setState(() => _librariesFuture = future);
   }
 
   List<JellyfinLibrary> _visible(List<JellyfinLibrary> all) {
@@ -669,19 +669,21 @@ class _WindowsShellState extends State<_WindowsShell> {
   }
 
   Future<void> _editLibraries() async {
-    final result = await showAdaptiveSheet<({List<String> order, List<String> hidden})>(
-      context: context,
-      backgroundColor: AppColors.panel,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => LibraryEditorSheet(
-        libraries: _visible(_allLibraries) +
-            _allLibraries
-                .where((l) => _settings.hiddenLibraries.contains(l.id))
-                .toList(),
-        hidden: _settings.hiddenLibraries,
-      ),
-    );
+    final result =
+        await showAdaptiveSheet<({List<String> order, List<String> hidden})>(
+          context: context,
+          backgroundColor: AppColors.panel,
+          isScrollControlled: true,
+          showDragHandle: true,
+          builder: (_) => LibraryEditorSheet(
+            libraries:
+                _visible(_allLibraries) +
+                _allLibraries
+                    .where((l) => _settings.hiddenLibraries.contains(l.id))
+                    .toList(),
+            hidden: _settings.hiddenLibraries,
+          ),
+        );
     if (result == null) return;
     await _saveSettings(
       _settings.copyWith(
@@ -763,7 +765,8 @@ class _WindowsShellState extends State<_WindowsShell> {
                           label: 'Settings',
                           onPressed: () {
                             Navigator.of(context).pushAdaptive<void>(
-                              builder: (_) => SettingsScreen(session: widget.session),
+                              builder: (_) =>
+                                  SettingsScreen(session: widget.session),
                               name: '/settings',
                             );
                           },
@@ -803,10 +806,7 @@ class _WindowsShellState extends State<_WindowsShell> {
 
 /// Android app with Material 3 bottom nav bar
 class _AndroidShell extends StatefulWidget {
-  const _AndroidShell({
-    required this.session,
-    required this.onSignedOut,
-  });
+  const _AndroidShell({required this.session, required this.onSignedOut});
 
   final JellyfinSession session;
   final Future<void> Function() onSignedOut;
@@ -831,7 +831,8 @@ class _AndroidShellState extends State<_AndroidShell> {
   Future<void> _bootstrap() async {
     _settings = await AppSettingsStore.load();
     if (!mounted) return;
-    setState(() => _librariesFuture = _loadLibraries());
+    final future = _loadLibraries();
+    setState(() => _librariesFuture = future);
   }
 
   List<JellyfinLibrary> _visible(List<JellyfinLibrary> all) {
@@ -843,7 +844,9 @@ class _AndroidShellState extends State<_AndroidShell> {
       if (lib != null && !hidden.contains(id)) result.add(lib);
     }
     for (final l in all) {
-      if (!_settings.libraryOrder.contains(l.id) && !hidden.contains(l.id)) result.add(l);
+      if (!_settings.libraryOrder.contains(l.id) && !hidden.contains(l.id)) {
+        result.add(l);
+      }
     }
     return result;
   }
@@ -853,7 +856,11 @@ class _AndroidShellState extends State<_AndroidShell> {
     final pinned = _settings.pinnedNavLibraries;
     if (pinned.isEmpty) return visible.take(4).toList();
     final byId = {for (final l in visible) l.id: l};
-    return pinned.map((id) => byId[id]).whereType<JellyfinLibrary>().take(4).toList();
+    return pinned
+        .map((id) => byId[id])
+        .whereType<JellyfinLibrary>()
+        .take(4)
+        .toList();
   }
 
   Future<List<JellyfinLibrary>> _loadLibraries() async {
@@ -868,22 +875,28 @@ class _AndroidShellState extends State<_AndroidShell> {
   }
 
   Future<void> _editLibraries() async {
-    final result = await showAdaptiveSheet<({List<String> order, List<String> hidden})>(
-      context: context,
-      backgroundColor: AppColors.panel,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => LibraryEditorSheet(
-        libraries: _visible(_allLibraries) +
-            _allLibraries.where((l) => _settings.hiddenLibraries.contains(l.id)).toList(),
-        hidden: _settings.hiddenLibraries,
+    final result =
+        await showAdaptiveSheet<({List<String> order, List<String> hidden})>(
+          context: context,
+          backgroundColor: AppColors.panel,
+          isScrollControlled: true,
+          showDragHandle: true,
+          builder: (_) => LibraryEditorSheet(
+            libraries:
+                _visible(_allLibraries) +
+                _allLibraries
+                    .where((l) => _settings.hiddenLibraries.contains(l.id))
+                    .toList(),
+            hidden: _settings.hiddenLibraries,
+          ),
+        );
+    if (result == null) return;
+    await _saveSettings(
+      _settings.copyWith(
+        libraryOrder: result.order,
+        hiddenLibraries: result.hidden,
       ),
     );
-    if (result == null) return;
-    await _saveSettings(_settings.copyWith(
-      libraryOrder: result.order,
-      hiddenLibraries: result.hidden,
-    ));
   }
 
   @override
@@ -892,14 +905,21 @@ class _AndroidShellState extends State<_AndroidShell> {
     return FutureBuilder<List<JellyfinLibrary>>(
       future: _librariesFuture,
       builder: (context, snapshot) {
-        if (_librariesFuture == null || snapshot.connectionState != ConnectionState.done) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        if (_librariesFuture == null ||
+            snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
         if (snapshot.hasError) {
           return Scaffold(
             body: ErrorPane(
               message: friendlyError(snapshot.error),
-              onRetry: () => setState(() => _librariesFuture = _loadLibraries()),
+              onRetry: () {
+                setState(() {
+                  _librariesFuture = _loadLibraries();
+                });
+              },
             ),
           );
         }
@@ -947,8 +967,14 @@ class _AndroidShellState extends State<_AndroidShell> {
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.logout_rounded, color: Colors.redAccent),
-                  title: const Text('Sign Out', style: TextStyle(color: Colors.redAccent)),
+                  leading: const Icon(
+                    Icons.logout_rounded,
+                    color: Colors.redAccent,
+                  ),
+                  title: const Text(
+                    'Sign Out',
+                    style: TextStyle(color: Colors.redAccent),
+                  ),
                   onTap: widget.onSignedOut,
                 ),
               ],
@@ -984,20 +1010,14 @@ class _AndroidShellState extends State<_AndroidShell> {
 
 /// Default fallback
 class _DefaultShell extends StatelessWidget {
-  const _DefaultShell({
-    required this.session,
-    required this.onSignedOut,
-  });
+  const _DefaultShell({required this.session, required this.onSignedOut});
 
   final JellyfinSession session;
   final Future<void> Function() onSignedOut;
 
   @override
   Widget build(BuildContext context) {
-    return HomeScreen(
-      session: session,
-      onSignedOut: onSignedOut,
-    );
+    return HomeScreen(session: session, onSignedOut: onSignedOut);
   }
 }
 
@@ -1129,10 +1149,7 @@ class _SidebarItem extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(
-                  icon,
-                  color: selected ? AppColors.cyan : Colors.white70,
-                ),
+                Icon(icon, color: selected ? AppColors.cyan : Colors.white70),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -1192,10 +1209,7 @@ class _SidebarButton extends StatelessWidget {
 
 /// Sheet for choosing which libraries appear in the iOS nav bar (max 4).
 class _NavCustomizerSheet extends StatefulWidget {
-  const _NavCustomizerSheet({
-    required this.libraries,
-    required this.pinned,
-  });
+  const _NavCustomizerSheet({required this.libraries, required this.pinned});
 
   final List<JellyfinLibrary> libraries;
   final List<String> pinned;
@@ -1229,61 +1243,63 @@ class _NavCustomizerSheetState extends State<_NavCustomizerSheet> {
       color: AppColors.panel,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
       child: SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Customize Navigation',
-                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-                      ),
-                      Text(
-                        'Choose up to 4  •  ${_pinned.length}/4 selected',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.white.withValues(alpha: 0.5),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Customize Navigation',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                    ],
+                        Text(
+                          'Choose up to 4  •  ${_pinned.length}/4 selected',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white.withValues(alpha: 0.5),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                cupertino.CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  onPressed: () => Navigator.of(context).pop(_pinned),
-                  child: const Text('Done'),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          for (final lib in widget.libraries)
-            cupertino.CupertinoListTile(
-              leading: Icon(iconForLibrary(lib.collectionType)),
-              title: Text(lib.name),
-              trailing: cupertino.CupertinoCheckbox(
-                value: _pinned.contains(lib.id),
-                onChanged: (_pinned.contains(lib.id) || _pinned.length < 4)
-                    ? (_) => _toggle(lib.id)
-                    : null,
-                activeColor: AppColors.cyan,
+                  cupertino.CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () => Navigator.of(context).pop(_pinned),
+                    child: const Text('Done'),
+                  ),
+                ],
               ),
-              onTap: (_pinned.contains(lib.id) || _pinned.length < 4)
-                  ? () => _toggle(lib.id)
-                  : null,
             ),
-          const SizedBox(height: 12),
-        ],
+            const Divider(height: 1),
+            for (final lib in widget.libraries)
+              cupertino.CupertinoListTile(
+                leading: Icon(iconForLibrary(lib.collectionType)),
+                title: Text(lib.name),
+                trailing: cupertino.CupertinoCheckbox(
+                  value: _pinned.contains(lib.id),
+                  onChanged: (_pinned.contains(lib.id) || _pinned.length < 4)
+                      ? (_) => _toggle(lib.id)
+                      : null,
+                  activeColor: AppColors.cyan,
+                ),
+                onTap: (_pinned.contains(lib.id) || _pinned.length < 4)
+                    ? () => _toggle(lib.id)
+                    : null,
+              ),
+            const SizedBox(height: 12),
+          ],
+        ),
       ),
-    ));
+    );
   }
 }
-
-

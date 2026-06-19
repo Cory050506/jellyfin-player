@@ -24,7 +24,24 @@ Future<T?> showAdaptiveSheet<T>({
         builder: builder,
       );
     case TargetPlatform.android:
-      // Android uses Material bottom sheet
+      if (isScrollControlled) {
+        return showDialog<T>(
+          context: context,
+          barrierColor: Colors.black.withValues(alpha: 0.45),
+          builder: (dialogContext) {
+            final size = MediaQuery.sizeOf(dialogContext);
+            return Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.all(16),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: size.height * 0.86),
+                child: builder(dialogContext),
+              ),
+            );
+          },
+        );
+      }
+      // Compact Android sheets use Material bottom sheets.
       return showModalBottomSheet<T>(
         context: context,
         backgroundColor: backgroundColor ?? Colors.transparent,

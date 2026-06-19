@@ -68,10 +68,9 @@ packages:
   better_native_video_player:
     dependency: "direct main"
     description:
-      name: better_native_video_player
-      sha256: "356a5738b4e9062371822d6d6cf96586336136cf2e0ae0b1736fc39ddbec980d"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/better_native_video_player"
+      relative: true
+    source: path
     version: "1.2.0"
   boolean_selector:
     dependency: transitive

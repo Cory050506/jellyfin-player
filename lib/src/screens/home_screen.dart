@@ -83,19 +83,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _editLibraries() async {
-    final result = await showAdaptiveSheet<({List<String> order, List<String> hidden})>(
-      context: context,
-      backgroundColor: AppColors.panel,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => LibraryEditorSheet(
-        libraries: _visible(_allLibraries) +
-            _allLibraries
-                .where((l) => _settings.hiddenLibraries.contains(l.id))
-                .toList(),
-        hidden: _settings.hiddenLibraries,
-      ),
-    );
+    final result =
+        await showAdaptiveSheet<({List<String> order, List<String> hidden})>(
+          context: context,
+          backgroundColor: AppColors.panel,
+          isScrollControlled: true,
+          showDragHandle: true,
+          builder: (_) => LibraryEditorSheet(
+            libraries:
+                _visible(_allLibraries) +
+                _allLibraries
+                    .where((l) => _settings.hiddenLibraries.contains(l.id))
+                    .toList(),
+            hidden: _settings.hiddenLibraries,
+          ),
+        );
     if (result == null) return;
     await _saveSettings(
       _settings.copyWith(
@@ -413,94 +415,109 @@ class _LibraryEditorSheetState extends State<LibraryEditorSheet> {
       color: AppColors.panel,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
       child: SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'Edit libraries',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'Edit libraries',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const Spacer(),
+                  AdaptiveButton(
+                    label: 'Done',
+                    shrinkWrap: true,
+                    onPressed: () => Navigator.of(context).pop((
+                      order: _order.map((l) => l.id).toList(),
+                      hidden: _hidden.toList(),
+                    )),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Use the arrows to reorder. Tap the eye to hide a library from the sidebar.',
+                style: TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+              const SizedBox(height: 8),
+              Flexible(
+                child: Material(
+                  color: Colors.transparent,
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _order.length,
+                    itemBuilder: (context, index) {
+                      final lib = _order[index];
+                      final hidden = _hidden.contains(lib.id);
+                      return ListTile(
+                        key: ValueKey(lib.id),
+                        leading: Icon(iconForLibrary(lib.collectionType)),
+                        title: Text(
+                          lib.name,
+                          style: TextStyle(
+                            color: hidden ? Colors.white38 : Colors.white,
+                          ),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              tooltip: hidden ? 'Show' : 'Hide',
+                              icon: Icon(
+                                hidden
+                                    ? Icons.visibility_off_rounded
+                                    : Icons.visibility_rounded,
+                                color: hidden ? Colors.white38 : AppColors.cyan,
+                              ),
+                              onPressed: () => setState(() {
+                                if (hidden) {
+                                  _hidden.remove(lib.id);
+                                } else {
+                                  _hidden.add(lib.id);
+                                }
+                              }),
+                            ),
+                            IconButton(
+                              tooltip: 'Move up',
+                              icon: const Icon(Icons.keyboard_arrow_up_rounded),
+                              color: Colors.white54,
+                              onPressed: index == 0
+                                  ? null
+                                  : () => setState(() {
+                                      final item = _order.removeAt(index);
+                                      _order.insert(index - 1, item);
+                                    }),
+                            ),
+                            IconButton(
+                              tooltip: 'Move down',
+                              icon: const Icon(
+                                Icons.keyboard_arrow_down_rounded,
+                              ),
+                              color: Colors.white54,
+                              onPressed: index == _order.length - 1
+                                  ? null
+                                  : () => setState(() {
+                                      final item = _order.removeAt(index);
+                                      _order.insert(index + 1, item);
+                                    }),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                 ),
-                const Spacer(),
-                AdaptiveButton(
-                  label: 'Done',
-                  shrinkWrap: true,
-                  onPressed: () => Navigator.of(context).pop((
-                    order: _order.map((l) => l.id).toList(),
-                    hidden: _hidden.toList(),
-                  )),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Drag to reorder. Tap the eye to hide a library from the sidebar.',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
-            ),
-            const SizedBox(height: 8),
-            Flexible(
-              child: Material(
-                color: Colors.transparent,
-                child: ReorderableListView.builder(
-                  shrinkWrap: true,
-                  itemCount: _order.length,
-                  onReorderItem: (oldIndex, newIndex) {
-                    setState(() {
-                      final item = _order.removeAt(oldIndex);
-                      _order.insert(newIndex, item);
-                    });
-                  },
-                  itemBuilder: (context, index) {
-                    final lib = _order[index];
-                    final hidden = _hidden.contains(lib.id);
-                    return ListTile(
-                      key: ValueKey(lib.id),
-                      leading: Icon(iconForLibrary(lib.collectionType)),
-                      title: Text(
-                        lib.name,
-                        style: TextStyle(
-                          color: hidden ? Colors.white38 : Colors.white,
-                        ),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            tooltip: hidden ? 'Show' : 'Hide',
-                            icon: Icon(
-                              hidden
-                                  ? Icons.visibility_off_rounded
-                                  : Icons.visibility_rounded,
-                              color: hidden ? Colors.white38 : AppColors.cyan,
-                            ),
-                            onPressed: () => setState(() {
-                              if (hidden) {
-                                _hidden.remove(lib.id);
-                              } else {
-                                _hidden.add(lib.id);
-                              }
-                            }),
-                          ),
-                          const Icon(
-                            Icons.drag_handle_rounded,
-                            color: Colors.white38,
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      )),
+      ),
     );
   }
 }
