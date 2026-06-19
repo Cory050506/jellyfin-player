@@ -69,10 +69,10 @@ packages:
     dependency: "direct main"
     description:
       name: better_native_video_player
-      sha256: "153f5b147b68e9a721e0bc34a529af56c7a38383b261227651b4dd17cad1f3fd"
+      sha256: "356a5738b4e9062371822d6d6cf96586336136cf2e0ae0b1736fc39ddbec980d"
       url: "https://pub.dev"
     source: hosted
-    version: "1.1.0"
+    version: "1.2.0"
   boolean_selector:
     dependency: transitive
     description:
