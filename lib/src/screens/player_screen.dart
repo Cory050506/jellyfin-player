@@ -421,8 +421,10 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Don't pause playback when app goes to background - PiP will handle it
-    // Do nothing here - let native PiP take over
+    if (state == AppLifecycleState.paused && _useNativePlayer && _nativeController != null) {
+      // Explicitly enter PiP when app goes to background
+      unawaited(_nativeController!.enterPictureInPicture());
+    }
   }
 
   @override
