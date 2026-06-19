@@ -25,11 +25,15 @@ jobs:
 
       - run: flutter pub get
 
-      - name: Import self-signed signing certificate
+      - name: Import signing certificate
         env:
           CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
           CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
         run: |
+          if [ -z "$CERT_P12_BASE64" ]; then
+            echo "No cert secret — skipping import, will use ad-hoc signing"
+            exit 0
+          fi
           echo "$CERT_P12_BASE64" | base64 --decode > /tmp/cert.p12
           security create-keychain -p ci build.keychain
           security default-keychain -s build.keychain
@@ -47,7 +51,7 @@ jobs:
           codesign --deep --force --sign "HQFin" "$APP" || \
           codesign --deep --force --sign "-" "$APP"
 
-      - name: Package as zip (Sparkle requires zip for macOS)
+      - name: Package as zip
         run: |
           cd build/macos/Build/Products/Release
           APP=$(find . -name "*.app" -maxdepth 1 | head -1 | sed 's|./||')
@@ -58,10 +62,16 @@ jobs:
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
+          if [ -z "$SPARKLE_PRIVATE_KEY" ]; then
+            echo "No Sparkle key — skipping EdDSA signature"
+            echo "signature=" >> $GITHUB_OUTPUT
+            echo "size=0" >> $GITHUB_OUTPUT
+            exit 0
+          fi
           echo "$SPARKLE_PRIVATE_KEY" > /tmp/sparkle_private.pem
           SIGNATURE=$(openssl pkeyutl -sign -inkey /tmp/sparkle_private.pem \
             -rawin -in build/macos/Build/Products/Release/hqfin-macos.zip \
-            | base64)
+            | base64 | tr -d '\n')
           SIZE=$(stat -f%z build/macos/Build/Products/Release/hqfin-macos.zip)
           echo "signature=$SIGNATURE" >> $GITHUB_OUTPUT
           echo "size=$SIZE" >> $GITHUB_OUTPUT
@@ -101,12 +111,12 @@ jobs:
           mkdir -p build/ios/iphoneos/Payload
           cp -r build/ios/iphoneos/Runner.app build/ios/iphoneos/Payload/
           cd build/ios/iphoneos
-          zip -r jellyfin-player.ipa Payload
+          zip -r hqfin.ipa Payload
 
       - uses: actions/upload-artifact@v7
         with:
           name: ios
-          path: build/ios/iphoneos/jellyfin-player.ipa
+          path: build/ios/iphoneos/hqfin.ipa
 
   # ── Android ────────────────────────────────────────────────────────────────
   build-android:
@@ -126,7 +136,7 @@ jobs:
 
       - run: flutter pub get
 
-      - name: Build APK (universal, good for TV sideload)
+      - name: Build APK
         run: flutter build apk --release
 
       - uses: actions/upload-artifact@v7
@@ -154,12 +164,12 @@ jobs:
         shell: pwsh
         run: |
           Compress-Archive -Path build\windows\x64\runner\Release\* `
-            -DestinationPath jellyfin-player-windows.zip
+            -DestinationPath hqfin-windows.zip
 
       - uses: actions/upload-artifact@v7
         with:
           name: windows
-          path: jellyfin-player-windows.zip
+          path: hqfin-windows.zip
 
   # ── Release + appcast ──────────────────────────────────────────────────────
   release:
@@ -182,17 +192,17 @@ jobs:
           echo "tag=v${VERSION%+*}" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
-        id: release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: ${{ steps.version.outputs.tag }}
+          name: HQFin ${{ steps.version.outputs.tag }}
           make_latest: true
+          fail_on_unmatched_files: false
           files: |
             artifacts/macos/hqfin-macos.zip
-            artifacts/ios/jellyfin-player.ipa
+            artifacts/ios/hqfin.ipa
             artifacts/android/app-release.apk
-            artifacts/windows/jellyfin-player-windows.zip
+            artifacts/windows/hqfin-windows.zip
 
       - name: Update appcast.xml
         env:
@@ -204,31 +214,32 @@ jobs:
           DATE=$(date -u "+%a, %d %b %Y %H:%M:%S +0000")
           DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/hqfin-macos.zip"
           cat > appcast.xml << EOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
-            <channel>
-              <title>HQFin</title>
-              <item>
-                <title>HQFin ${VERSION}</title>
-                <pubDate>${DATE}</pubDate>
-                <sparkle:version>${VERSION#v}</sparkle:version>
-                <sparkle:shortVersionString>${VERSION#v}</sparkle:shortVersionString>
-                <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
-                <enclosure
-                  url="${DOWNLOAD_URL}"
-                  sparkle:version="${VERSION#v}"
-                  sparkle:edSignature="${SPARKLE_SIGNATURE}"
-                  length="${MACOS_SIZE}"
-                  type="application/octet-stream"/>
-              </item>
-            </channel>
-          </rss>
-          EOF
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+  <channel>
+    <title>HQFin</title>
+    <item>
+      <title>HQFin ${VERSION}</title>
+      <pubDate>${DATE}</pubDate>
+      <sparkle:version>${VERSION#v}</sparkle:version>
+      <sparkle:shortVersionString>${VERSION#v}</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>
+      <enclosure
+        url="${DOWNLOAD_URL}"
+        sparkle:version="${VERSION#v}"
+        sparkle:edSignature="${SPARKLE_SIGNATURE}"
+        length="${MACOS_SIZE}"
+        type="application/octet-stream"/>
+    </item>
+  </channel>
+</rss>
+EOF
 
       - name: Commit updated appcast
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase
           git add appcast.xml
           git diff --staged --quiet || git commit -m "Update appcast to ${{ steps.version.outputs.tag }} [skip ci]"
           git push
