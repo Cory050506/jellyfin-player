@@ -537,20 +537,30 @@ class _PlayerScreenState extends State<PlayerScreen> {
                       child: IconButton.filledTonal(
                         tooltip: 'Close player',
                         onPressed: () async {
+                          debugPrint('X button tapped');
                           final nav = Navigator.of(context);
+                          debugPrint('Got navigator');
                           await _reportStopped();
+                          debugPrint('Reported stopped');
                           // Fully exit fullscreen before popping
                           if (_nativeController != null) {
                             try {
+                              debugPrint('Exiting fullscreen...');
                               await _nativeController!.exitFullScreen();
+                              debugPrint('Fullscreen exited');
                               // Wait longer for native dismissal to complete
                               await Future<void>.delayed(const Duration(milliseconds: 500));
+                              debugPrint('Delay complete');
                             } catch (e) {
                               debugPrint('exitFullScreen error: $e');
                             }
                           }
                           if (context.mounted) {
+                            debugPrint('Context mounted, calling pop()');
                             nav.pop();
+                            debugPrint('pop() called');
+                          } else {
+                            debugPrint('Context NOT mounted');
                           }
                         },
                         icon: const Icon(Icons.close_rounded),
