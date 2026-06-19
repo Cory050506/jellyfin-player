@@ -89,7 +89,7 @@ jobs:
 
       - name: Patch better_native_video_player (npLog undefined in Xcode 26)
         run: |
-          find ~/.pub-cache -path "*/better_native_video_player*/VideoPlayerView.swift" \
+          find ~/.pub-cache -path "*/better_native_video_player*/*.swift" \
             -exec sed -i '' 's/npLog(/print(/g' {} +
 
       - name: Build iOS (unsigned)
