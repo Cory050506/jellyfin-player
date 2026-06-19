@@ -52,6 +52,17 @@ IconData iconForLibrary(String type) {
   };
 }
 
+/// Maps Jellyfin library collection types to SF Symbol names for iOS native nav
+String sfSymbolForLibrary(String type) {
+  return switch (type) {
+    'movies' => 'film.fill',
+    'tvshows' => 'tv.fill',
+    'music' => 'music.note',
+    'books' => 'book.fill',
+    _ => 'rectangle.stack.fill',
+  };
+}
+
 T enumByName<T extends Enum>(List<T> values, String? name, T fallback) {
   for (final value in values) {
     if (value.name == name) {

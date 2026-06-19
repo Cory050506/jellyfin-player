@@ -6,12 +6,18 @@ PODS:
     - Flutter
   - media_kit_video (0.0.1):
     - Flutter
+  - native_glass_navbar (0.0.1):
+    - Flutter
+  - protocol_handler_ios (0.0.1):
+    - Flutter
 
 DEPENDENCIES:
   - cupertino_native (from `.symlinks/plugins/cupertino_native/ios`)
   - Flutter (from `Flutter`)
   - media_kit_libs_ios_video (from `.symlinks/plugins/media_kit_libs_ios_video/ios`)
   - media_kit_video (from `.symlinks/plugins/media_kit_video/ios`)
+  - native_glass_navbar (from `.symlinks/plugins/native_glass_navbar/ios`)
+  - protocol_handler_ios (from `.symlinks/plugins/protocol_handler_ios/ios`)
 
 EXTERNAL SOURCES:
   cupertino_native:
@@ -22,12 +28,18 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/media_kit_libs_ios_video/ios"
   media_kit_video:
     :path: ".symlinks/plugins/media_kit_video/ios"
+  native_glass_navbar:
+    :path: ".symlinks/plugins/native_glass_navbar/ios"
+  protocol_handler_ios:
+    :path: ".symlinks/plugins/protocol_handler_ios/ios"
 
 SPEC CHECKSUMS:
   cupertino_native: 1db0611c94f9a9ea28433ed16a344dcb996370b5
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   media_kit_libs_ios_video: 5a18affdb97d1f5d466dc79988b13eff6c5e2854
   media_kit_video: 1746e198cb697d1ffb734b1d05ec429d1fcd1474
+  native_glass_navbar: ca05c3855b2bcce8b117a6db54f51e63e149f032
+  protocol_handler_ios: 59f23ee71f3ec602d67902ca7f669a80957888d5
 
 PODFILE CHECKSUM: e30f02f9d1c72c47bb6344a0a748c9d268180865
 

@@ -165,77 +165,93 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
             ),
           );
         }
+        // Cap at 4 library tabs + 1 "More" tab (plugin max is 5)
         final visible = _visible(all);
-        return Stack(
-          children: [
-            // Content area
-            IndexedStack(
-              index: _selectedIndex,
-              children: [
-                for (int i = 0; i < visible.length; i++)
-                  ItemsView(
-                    client: _client,
-                    library: visible[i],
-                    itemsFuture: _client.getItems(visible[i]),
-                    onRefresh: () {},
-                  ),
-                // More menu
-                cupertino.CupertinoPageScaffold(
-                  navigationBar: const cupertino.CupertinoNavigationBar(
-                    middle: Text('More'),
-                  ),
-                  child: ListView(
-                    children: [
-                      cupertino.CupertinoListTile(
-                        title: const Text('Edit Libraries'),
-                        trailing: const cupertino.CupertinoListTileChevron(),
-                        onTap: _editLibraries,
-                      ),
-                      cupertino.CupertinoListTile(
-                        title: const Text('Settings'),
-                        trailing: const cupertino.CupertinoListTileChevron(),
-                        onTap: () {
-                          Navigator.of(context).pushAdaptive<void>(
-                            builder: (_) => const SettingsScreen(),
-                            name: '/settings',
-                          );
-                        },
-                      ),
-                      cupertino.CupertinoListTile(
-                        title: const Text('Sign Out'),
-                        trailing: const cupertino.CupertinoListTileChevron(),
-                        onTap: widget.onSignedOut,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+        final tabLibs = visible.take(4).toList();
+        final hasMore = visible.length > 4;
+
+        final tabs = [
+          for (final lib in tabLibs)
+            NativeGlassNavBarItem(
+              label: lib.name,
+              symbol: sfSymbolForLibrary(lib.collectionType),
             ),
-            // iOS 26 Glass bottom nav bar
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: SafeArea(
-                top: false,
-                child: _GlassNavBar(
-                  items: [
-                    for (final lib in visible)
-                      _NavBarItem(
-                        icon: iconForLibrary(lib.collectionType),
-                        label: lib.name,
-                      ),
-                    const _NavBarItem(
-                      icon: Icons.more_horiz_rounded,
-                      label: 'More',
-                    ),
-                  ],
-                  selectedIndex: _selectedIndex,
-                  onTap: (index) => setState(() => _selectedIndex = index),
-                ),
+          if (hasMore || true) // always show More for settings/sign-out
+            const NativeGlassNavBarItem(label: 'More', symbol: 'ellipsis'),
+        ];
+
+        final pages = [
+          for (final lib in tabLibs)
+            ItemsView(
+              client: _client,
+              library: lib,
+              itemsFuture: _client.getItems(lib),
+              onRefresh: () {},
+            ),
+          // More page
+          cupertino.CupertinoPageScaffold(
+            navigationBar: const cupertino.CupertinoNavigationBar(
+              middle: Text('More'),
+            ),
+            child: SafeArea(
+              child: ListView(
+                children: [
+                  cupertino.CupertinoListTile(
+                    title: const Text('Edit Libraries'),
+                    trailing: const cupertino.CupertinoListTileChevron(),
+                    onTap: _editLibraries,
+                  ),
+                  cupertino.CupertinoListTile(
+                    title: const Text('Settings'),
+                    trailing: const cupertino.CupertinoListTileChevron(),
+                    onTap: () {
+                      Navigator.of(context).pushAdaptive<void>(
+                        builder: (_) => const SettingsScreen(),
+                        name: '/settings',
+                      );
+                    },
+                  ),
+                  cupertino.CupertinoListTile(
+                    title: const Text('Sign Out'),
+                    trailing: const cupertino.CupertinoListTileChevron(),
+                    onTap: widget.onSignedOut,
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
+        ];
+
+        return Scaffold(
+          // extendBody lets content draw behind the floating nav bar
+          extendBody: true,
+          backgroundColor: AppColors.background,
+          body: IndexedStack(
+            index: _selectedIndex,
+            children: pages,
+          ),
+          bottomNavigationBar: NativeGlassNavBar(
+            tabs: tabs,
+            currentIndex: _selectedIndex,
+            onTap: (index) => setState(() => _selectedIndex = index),
+            tintColor: AppColors.cyan,
+            fallback: cupertino.CupertinoTabBar(
+              items: [
+                for (final lib in tabLibs)
+                  cupertino.BottomNavigationBarItem(
+                    icon: Icon(iconForLibrary(lib.collectionType)),
+                    label: lib.name,
+                  ),
+                const cupertino.BottomNavigationBarItem(
+                  icon: Icon(cupertino.CupertinoIcons.ellipsis),
+                  label: 'More',
+                ),
+              ],
+              currentIndex: _selectedIndex,
+              onTap: (index) => setState(() => _selectedIndex = index),
+              activeColor: AppColors.cyan,
+            ),
+          ),
         );
       },
     );
@@ -918,102 +934,4 @@ class _SidebarButton extends StatelessWidget {
   }
 }
 
-// iOS 26 Liquid Glass Navigation
-
-class _NavBarItem {
-  final IconData icon;
-  final String label;
-
-  const _NavBarItem({
-    required this.icon,
-    required this.label,
-  });
-}
-
-class _GlassNavBar extends StatelessWidget {
-  final List<_NavBarItem> items;
-  final int selectedIndex;
-  final ValueChanged<int> onTap;
-
-  const _GlassNavBar({
-    required this.items,
-    required this.selectedIndex,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: const Color(0xff1a1a1a).withValues(alpha: 0.7),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            color: const Color(0x1affffff),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                for (int i = 0; i < items.length; i++)
-                  _NavBarButton(
-                    item: items[i],
-                    selected: i == selectedIndex,
-                    onTap: () => onTap(i),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavBarButton extends StatelessWidget {
-  final _NavBarItem item;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _NavBarButton({
-    required this.item,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xff00a4dc).withValues(alpha: 0.2) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              item.icon,
-              color: selected ? const Color(0xff00a4dc) : Colors.white70,
-              size: 24,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              item.label,
-              style: TextStyle(
-                fontSize: 10,
-                color: selected ? Colors.white : Colors.white70,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
