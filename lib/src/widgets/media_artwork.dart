@@ -250,21 +250,52 @@ class _MediaTileState extends State<MediaTile> {
                               ),
                             ),
                           ),
-                          if (widget.item.playbackPositionTicks > 0 &&
-                              widget.item.runTimeTicks != null &&
-                              widget.item.runTimeTicks! > 0)
-                            Positioned(
+                          // Progress bar: prefer tick-level precision, fall
+                          // back to server-reported percentage (Series items).
+                          Builder(builder: (context) {
+                            final accent = AppColors.accent;
+                            double? progress;
+                            if (widget.item.isPlayed) {
+                              progress = 1.0;
+                            } else if (widget.item.playbackPositionTicks > 0 &&
+                                (widget.item.runTimeTicks ?? 0) > 0) {
+                              progress = (widget.item.playbackPositionTicks /
+                                      widget.item.runTimeTicks!)
+                                  .clamp(0.0, 1.0);
+                            } else if (widget.item.playedPercentage > 0) {
+                              progress =
+                                  (widget.item.playedPercentage / 100)
+                                      .clamp(0.0, 1.0);
+                            }
+                            if (progress == null) return const SizedBox.shrink();
+                            return Positioned(
                               left: 0,
                               right: 0,
                               bottom: 0,
                               child: LinearProgressIndicator(
-                                value: (widget.item.playbackPositionTicks /
-                                        widget.item.runTimeTicks!)
-                                    .clamp(0.0, 1.0),
+                                value: progress,
                                 minHeight: 3,
                                 backgroundColor: Colors.white24,
-                                valueColor: const AlwaysStoppedAnimation(
-                                  AppColors.cyan,
+                                valueColor: AlwaysStoppedAnimation(accent),
+                              ),
+                            );
+                          }),
+                          // Watched checkmark badge
+                          if (widget.item.isPlayed)
+                            Positioned(
+                              top: 6,
+                              right: 6,
+                              child: Container(
+                                width: 22,
+                                height: 22,
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.65),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.check_rounded,
+                                  size: 14,
+                                  color: Colors.white,
                                 ),
                               ),
                             ),

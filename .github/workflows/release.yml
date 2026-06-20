@@ -48,8 +48,21 @@ jobs:
         run: |
           APP=$(find build/macos/Build/Products/Release -name "*.app" -maxdepth 1 | head -1)
           echo "Signing $APP"
-          codesign --deep --force --sign "HQFin" "$APP" || \
-          codesign --deep --force --sign "-" "$APP"
+          # Try to find a Developer ID Application cert (required for Gatekeeper).
+          # Falls back to ad-hoc ("-") if none is present.
+          if [ -n "$CERT_P12_BASE64" ]; then
+            IDENTITY=$(security find-identity -v -p codesigning build.keychain \
+              | grep "Developer ID Application" | head -1 | sed 's/.*"\(.*\)".*/\1/')
+          fi
+          if [ -n "$IDENTITY" ]; then
+            echo "Signing with Developer ID: $IDENTITY"
+            codesign --deep --force --options runtime --sign "$IDENTITY" "$APP"
+          else
+            echo "No Developer ID cert found — using ad-hoc signing (Gatekeeper will block this)"
+            codesign --deep --force --sign "-" "$APP"
+          fi
+        env:
+          CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
 
       - name: Package as DMG
         run: |

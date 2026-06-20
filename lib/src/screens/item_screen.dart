@@ -19,6 +19,7 @@ class _ItemScreenState extends State<ItemScreen> {
   int? _selectedAudioStreamIndex;
   int? _selectedSubtitleStreamIndex;
   bool _tracksInitialized = false;
+  bool? _isPlayedOverride;
 
   Future<JellyfinItem> _loadDetails() async {
     final item = await widget.client.getItemDetails(widget.item.id);
@@ -59,6 +60,20 @@ class _ItemScreenState extends State<ItemScreen> {
     }
   }
 
+  Future<void> _toggleWatched(JellyfinItem item) async {
+    final nowPlayed = !(_isPlayedOverride ?? item.isPlayed);
+    setState(() => _isPlayedOverride = nowPlayed);
+    try {
+      if (nowPlayed) {
+        await widget.client.markPlayed(item.id);
+      } else {
+        await widget.client.markUnplayed(item.id);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isPlayedOverride = !nowPlayed);
+    }
+  }
+
   Future<void> _play(JellyfinItem item) async {
     final playableItem = item.mediaStreams.isEmpty
         ? await widget.client.getItemDetails(item.id)
@@ -96,7 +111,22 @@ class _ItemScreenState extends State<ItemScreen> {
         final item = snapshot.data ?? widget.item;
         final isPlayable = item.isPlayable;
         return Scaffold(
-          appBar: AppBar(title: Text(item.name)),
+          appBar: AppBar(
+            title: Text(item.name),
+            actions: [
+              IconButton(
+                tooltip: (_isPlayedOverride ?? item.isPlayed)
+                    ? 'Mark unwatched'
+                    : 'Mark as watched',
+                icon: Icon(
+                  (_isPlayedOverride ?? item.isPlayed)
+                      ? Icons.check_circle_rounded
+                      : Icons.check_circle_outline_rounded,
+                ),
+                onPressed: () => unawaited(_toggleWatched(item)),
+              ),
+            ],
+          ),
           body: CustomScrollView(
             slivers: [
               SliverToBoxAdapter(

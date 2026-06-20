@@ -104,6 +104,8 @@ class JellyfinItem {
     required this.seriesName,
     required this.seasonName,
     required this.playbackPositionTicks,
+    required this.isPlayed,
+    required this.playedPercentage,
     required this.mediaStreams,
     required this.people,
     this.primaryBlurHash,
@@ -123,6 +125,8 @@ class JellyfinItem {
   final String? seriesName;
   final String? seasonName;
   final int playbackPositionTicks;
+  final bool isPlayed;
+  final double playedPercentage;
   final List<JellyfinMediaStream> mediaStreams;
   final List<JellyfinPerson> people;
   final String? primaryBlurHash;
@@ -214,6 +218,9 @@ class JellyfinItem {
       seasonName: json['SeasonName'] as String?,
       playbackPositionTicks:
           (userData['PlaybackPositionTicks'] as num?)?.toInt() ?? 0,
+      isPlayed: userData['Played'] as bool? ?? false,
+      playedPercentage:
+          (userData['PlayedPercentage'] as num?)?.toDouble() ?? 0.0,
       mediaStreams: streams
           .map(
             (stream) =>

@@ -49,6 +49,9 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
   TouchBarButton? _tbPlayPause;
   StreamSubscription<bool>? _tbPlayingSub;
 
+  // iOS: true when user has exited native fullscreen — show Flutter controls
+  bool _nativeControlsVisible = false;
+
   bool get _useNativePlayer =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
@@ -174,13 +177,11 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
         // Listen for when user taps native X to exit fullscreen
         ctrl.isFullscreenStream.listen((isFullscreen) {
           if (isFullscreen) {
-            _userExitedFullscreen = true; // Mark that we've entered fullscreen
+            _userExitedFullscreen = true;
           } else if (_userExitedFullscreen && mounted) {
-            // User tapped native X: fullscreen went from true to false
-            unawaited(_reportStopped());
-            if (mounted) {
-              Navigator.of(context).pop();
-            }
+            // User exited native fullscreen — show Flutter controls instead
+            // of immediately popping, so they can switch audio/subtitle tracks.
+            setState(() => _nativeControlsVisible = true);
           }
         });
         // Give the widget one frame to attach the platform view before loading.
@@ -639,6 +640,8 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
             onPlayPause: () => unawaited(player.playOrPause()),
             item: widget.item,
             skipSeconds: settings?.skipDurationSeconds ?? 30,
+            volumeStream: player.stream.volume,
+            onVolumeChanged: (v) => unawaited(player.setVolume(v)),
           )
         : null;
 
@@ -658,47 +661,108 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
               // our own tap detector and chrome (they'd swallow the touches).
               // We keep only a lightweight back button to leave the player.
               if (_useNativePlayer) ...[
-                // Always-visible button to close player and return to item screen.
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  child: SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: IconButton.filledTonal(
-                        tooltip: 'Close player',
-                        onPressed: () async {
-                          debugPrint('X button tapped');
-                          final nav = Navigator.of(context);
-                          debugPrint('Got navigator');
-                          await _reportStopped();
-                          debugPrint('Reported stopped');
-                          // Fully exit fullscreen before popping
-                          if (_nativeController != null) {
-                            try {
-                              debugPrint('Exiting fullscreen...');
-                              await _nativeController!.exitFullScreen();
-                              debugPrint('Fullscreen exited');
-                              // Wait longer for native dismissal to complete
-                              await Future<void>.delayed(const Duration(milliseconds: 500));
-                              debugPrint('Delay complete');
-                            } catch (e) {
-                              debugPrint('exitFullScreen error: $e');
-                            }
-                          }
-                          if (context.mounted) {
-                            debugPrint('Context mounted, calling pop()');
-                            nav.pop();
-                            debugPrint('pop() called');
-                          } else {
-                            debugPrint('Context NOT mounted');
-                          }
-                        },
-                        icon: const Icon(Icons.close_rounded),
+                // When the user exits native fullscreen, show Flutter controls
+                // so they can change audio/subtitle tracks or close the player.
+                if (_nativeControlsVisible) ...[
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: const BoxDecoration(color: Color(0xcc000000)),
+                      child: SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                widget.item.displayTitle,
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                              const SizedBox(height: 32),
+                              Wrap(
+                                spacing: 12,
+                                runSpacing: 12,
+                                alignment: WrapAlignment.center,
+                                children: [
+                                  FilledButton.icon(
+                                    icon: const Icon(Icons.fullscreen_rounded),
+                                    label: const Text('Resume'),
+                                    onPressed: () async {
+                                      setState(() => _nativeControlsVisible = false);
+                                      await _nativeController?.play();
+                                      await _nativeController?.enterFullScreen();
+                                    },
+                                  ),
+                                  IconButton.filledTonal(
+                                    tooltip: 'Audio tracks',
+                                    icon: const Icon(Icons.spatial_audio_rounded),
+                                    onPressed: _showNativeAudioTracks,
+                                  ),
+                                  IconButton.filledTonal(
+                                    tooltip: 'Subtitles',
+                                    icon: const Icon(Icons.subtitles_rounded),
+                                    onPressed: _showNativeSubtitleTracks,
+                                  ),
+                                  if (widget.episodeList != null &&
+                                      widget.episodeList!.isNotEmpty)
+                                    IconButton.filledTonal(
+                                      tooltip: 'Episodes',
+                                      icon: const Icon(Icons.playlist_play_rounded),
+                                      onPressed: _showEpisodePicker,
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 32),
+                              TextButton.icon(
+                                icon: const Icon(Icons.close_rounded),
+                                label: const Text('Exit player'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white70,
+                                ),
+                                onPressed: () async {
+                                  final nav = Navigator.of(context);
+                                  await _reportStopped();
+                                  if (mounted) nav.pop();
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ] else ...[
+                  // Small floating X while native fullscreen is active.
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    child: SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: IconButton.filledTonal(
+                          tooltip: 'Close player',
+                          onPressed: () async {
+                            final nav = Navigator.of(context);
+                            await _reportStopped();
+                            if (_nativeController != null) {
+                              try {
+                                await _nativeController!.exitFullScreen();
+                                await Future<void>.delayed(
+                                  const Duration(milliseconds: 500),
+                                );
+                              } catch (_) {}
+                            }
+                            if (mounted) nav.pop();
+                          },
+                          icon: const Icon(Icons.close_rounded),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ] else ...[
                 // Tap anywhere to toggle play/pause; show controls briefly.
                 Positioned.fill(
@@ -1190,6 +1254,8 @@ class PlayerBottomChrome extends StatelessWidget {
     required this.onPlayPause,
     required this.item,
     this.skipSeconds = 30,
+    this.volumeStream,
+    this.onVolumeChanged,
   });
 
   final Stream<Duration> positionStream;
@@ -1199,6 +1265,8 @@ class PlayerBottomChrome extends StatelessWidget {
   final VoidCallback onPlayPause;
   final JellyfinItem item;
   final int skipSeconds;
+  final Stream<double>? volumeStream;
+  final ValueChanged<double>? onVolumeChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -1305,6 +1373,35 @@ class PlayerBottomChrome extends StatelessWidget {
                         onChanged: (next) =>
                             onSeek(Duration(milliseconds: next.round())),
                       ),
+                      if (volumeStream != null && onVolumeChanged != null)
+                        StreamBuilder<double>(
+                          stream: volumeStream,
+                          initialData: 100,
+                          builder: (context, volSnap) {
+                            final vol = (volSnap.data ?? 100).clamp(0.0, 100.0);
+                            return Row(
+                              children: [
+                                Icon(
+                                  vol == 0
+                                      ? Icons.volume_off_rounded
+                                      : vol < 50
+                                      ? Icons.volume_down_rounded
+                                      : Icons.volume_up_rounded,
+                                  color: Colors.white70,
+                                  size: 18,
+                                ),
+                                Expanded(
+                                  child: Slider(
+                                    min: 0,
+                                    max: 100,
+                                    value: vol,
+                                    onChanged: onVolumeChanged,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
                     ],
                   );
                 },

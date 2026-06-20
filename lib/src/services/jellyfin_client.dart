@@ -318,6 +318,28 @@ class JellyfinClient {
     return resolved;
   }
 
+  Future<void> markPlayed(String itemId) async {
+    final userId = session!.userId;
+    final response = await http.post(
+      _uri('/Users/$userId/PlayedItems/$itemId'),
+      headers: _headers,
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw JellyfinException('markPlayed failed: HTTP ${response.statusCode}');
+    }
+  }
+
+  Future<void> markUnplayed(String itemId) async {
+    final userId = session!.userId;
+    final response = await http.delete(
+      _uri('/Users/$userId/PlayedItems/$itemId'),
+      headers: _headers,
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw JellyfinException('markUnplayed failed: HTTP ${response.statusCode}');
+    }
+  }
+
   Future<void> _postPlayback(String path, Map<String, Object?> body) async {
     final response = await http.post(
       _uri(path),
