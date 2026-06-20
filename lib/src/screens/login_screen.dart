@@ -26,7 +26,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        navigationMode: NavigationMode.directional,
+      ),
+      child: Scaffold(
       resizeToAvoidBottomInset: true,
       body: DecoratedBox(
         decoration: const BoxDecoration(
@@ -81,6 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

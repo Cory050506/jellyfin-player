@@ -1060,7 +1060,11 @@ class _AndroidShellState extends State<_AndroidShell> {
           ),
         ];
 
-        return Scaffold(
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            navigationMode: NavigationMode.directional,
+          ),
+          child: Scaffold(
           extendBody: true,
           appBar: AppBar(
             title: const Text('HQFin'),
@@ -1091,6 +1095,7 @@ class _AndroidShellState extends State<_AndroidShell> {
                 label: 'Settings',
               ),
             ],
+          ),
           ),
         );
       },
