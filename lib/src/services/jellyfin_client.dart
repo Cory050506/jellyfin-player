@@ -179,8 +179,6 @@ class JellyfinClient {
         if (subtitleStreamIndex != null)
           'SubtitleStreamIndex': '$subtitleStreamIndex',
       });
-      // ignore: avoid_print
-      print('[streamUrl HLS] $uri');
       return uri;
     }
     final uri = _uri('/Videos/${item.id}/stream', {
@@ -191,8 +189,6 @@ class JellyfinClient {
       if (subtitleStreamIndex != null)
         'SubtitleStreamIndex': '$subtitleStreamIndex',
     });
-    // ignore: avoid_print
-    print('[streamUrl] $uri');
     return uri;
   }
 
@@ -355,7 +351,9 @@ class JellyfinClient {
       headers: _headers,
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw JellyfinException('markUnplayed failed: HTTP ${response.statusCode}');
+      throw JellyfinException(
+        'markUnplayed failed: HTTP ${response.statusCode}',
+      );
     }
   }
 

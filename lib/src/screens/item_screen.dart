@@ -649,8 +649,6 @@ class EpisodeTile extends StatelessWidget {
                       const SizedBox(height: 6),
                       Text(
                         item.overview,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Colors.white70,
                           height: 1.3,

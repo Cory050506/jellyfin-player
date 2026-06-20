@@ -429,13 +429,23 @@ class DetailBackdrop extends StatelessWidget {
               ),
             ),
           ),
-          Padding(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final narrow = constraints.maxWidth < 480;
+              final posterWidth = narrow ? 110.0 : 180.0;
+              final titleStyle = narrow
+                  ? Theme.of(context).textTheme.headlineMedium
+                      ?.copyWith(fontWeight: FontWeight.w900)
+                  : Theme.of(context).textTheme.displaySmall
+                      ?.copyWith(fontWeight: FontWeight.w900);
+              final accent = Theme.of(context).colorScheme.primary;
+              return Padding(
             padding: const EdgeInsets.all(28),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 SizedBox(
-                  width: 180,
+                  width: posterWidth,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(
@@ -452,7 +462,7 @@ class DetailBackdrop extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 26),
+                SizedBox(width: narrow ? 16 : 26),
                 Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -460,8 +470,8 @@ class DetailBackdrop extends StatelessWidget {
                     children: [
                       Text(
                         item.type,
-                        style: const TextStyle(
-                          color: AppColors.cyan,
+                        style: TextStyle(
+                          color: accent,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -470,8 +480,7 @@ class DetailBackdrop extends StatelessWidget {
                         item.name,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.displaySmall
-                            ?.copyWith(fontWeight: FontWeight.w900),
+                        style: titleStyle,
                       ),
                       const SizedBox(height: 8),
                       Text(
@@ -484,7 +493,7 @@ class DetailBackdrop extends StatelessWidget {
                           constraints: const BoxConstraints(maxWidth: 760),
                           child: Text(
                             item.overview,
-                            maxLines: 3,
+                            maxLines: narrow ? 2 : 3,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: Colors.white70,
@@ -515,9 +524,7 @@ class DetailBackdrop extends StatelessWidget {
                               .clamp(0.0, 1.0),
                           minHeight: 4,
                           backgroundColor: Colors.white24,
-                          valueColor: const AlwaysStoppedAnimation(
-                            AppColors.cyan,
-                          ),
+                          valueColor: AlwaysStoppedAnimation(accent),
                         ),
                       ],
                     ],
@@ -525,6 +532,8 @@ class DetailBackdrop extends StatelessWidget {
                 ),
               ],
             ),
+          );
+            },
           ),
         ],
       ),

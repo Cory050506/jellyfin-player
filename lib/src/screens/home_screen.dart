@@ -83,21 +83,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _editLibraries() async {
-    final result =
-        await showAdaptiveSheet<({List<String> order, List<String> hidden})>(
-          context: context,
-          backgroundColor: AppColors.panel,
-          isScrollControlled: true,
-          showDragHandle: true,
-          builder: (_) => LibraryEditorSheet(
-            libraries:
-                _visible(_allLibraries) +
-                _allLibraries
-                    .where((l) => _settings.hiddenLibraries.contains(l.id))
-                    .toList(),
-            hidden: _settings.hiddenLibraries,
-          ),
-        );
+    final result = await showLibraryEditor(
+      context: context,
+      libraries:
+          _visible(_allLibraries) +
+          _allLibraries
+              .where((l) => _settings.hiddenLibraries.contains(l.id))
+              .toList(),
+      hidden: _settings.hiddenLibraries,
+    );
     if (result == null) return;
     await _saveSettings(
       _settings.copyWith(
@@ -383,16 +377,47 @@ class MediaSidebar extends StatelessWidget {
   }
 }
 
-/// Bottom sheet that lets the user reorder and hide/show libraries.
+Future<({List<String> order, List<String> hidden})?> showLibraryEditor({
+  required BuildContext context,
+  required List<JellyfinLibrary> libraries,
+  required List<String> hidden,
+}) {
+  if (defaultTargetPlatform == TargetPlatform.android) {
+    return Navigator.of(
+      context,
+    ).push<({List<String> order, List<String> hidden})>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => LibraryEditorSheet(
+          libraries: libraries,
+          hidden: hidden,
+          fullscreen: true,
+        ),
+      ),
+    );
+  }
+
+  return showAdaptiveSheet<({List<String> order, List<String> hidden})>(
+    context: context,
+    backgroundColor: AppColors.panel,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => LibraryEditorSheet(libraries: libraries, hidden: hidden),
+  );
+}
+
+/// Lets the user reorder and hide/show libraries.
 class LibraryEditorSheet extends StatefulWidget {
   const LibraryEditorSheet({
     super.key,
     required this.libraries,
     required this.hidden,
+    this.fullscreen = false,
   });
 
   final List<JellyfinLibrary> libraries;
   final List<String> hidden;
+  final bool fullscreen;
 
   @override
   State<LibraryEditorSheet> createState() => _LibraryEditorSheetState();
@@ -411,113 +436,164 @@ class _LibraryEditorSheetState extends State<LibraryEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.fullscreen) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Edit libraries'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop((
+                order: _order.map((l) => l.id).toList(),
+                hidden: _hidden.toList(),
+              )),
+              child: const Text('Done'),
+            ),
+          ],
+        ),
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: _LibraryEditorList(
+              order: _order,
+              hidden: _hidden,
+              onToggleHidden: _toggleHidden,
+              onMove: _move,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Material(
       color: AppColors.panel,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
       child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    'Edit libraries',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.65,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'Edit libraries',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                  AdaptiveButton(
-                    label: 'Done',
-                    shrinkWrap: true,
-                    onPressed: () => Navigator.of(context).pop((
-                      order: _order.map((l) => l.id).toList(),
-                      hidden: _hidden.toList(),
-                    )),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Use the arrows to reorder. Tap the eye to hide a library from the sidebar.',
-                style: TextStyle(color: Colors.white54, fontSize: 12),
-              ),
-              const SizedBox(height: 8),
-              Flexible(
-                child: Material(
-                  color: Colors.transparent,
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: _order.length,
-                    itemBuilder: (context, index) {
-                      final lib = _order[index];
-                      final hidden = _hidden.contains(lib.id);
-                      return ListTile(
-                        key: ValueKey(lib.id),
-                        leading: Icon(iconForLibrary(lib.collectionType)),
-                        title: Text(
-                          lib.name,
-                          style: TextStyle(
-                            color: hidden ? Colors.white38 : Colors.white,
-                          ),
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              tooltip: hidden ? 'Show' : 'Hide',
-                              icon: Icon(
-                                hidden
-                                    ? Icons.visibility_off_rounded
-                                    : Icons.visibility_rounded,
-                                color: hidden ? Colors.white38 : AppColors.cyan,
-                              ),
-                              onPressed: () => setState(() {
-                                if (hidden) {
-                                  _hidden.remove(lib.id);
-                                } else {
-                                  _hidden.add(lib.id);
-                                }
-                              }),
-                            ),
-                            IconButton(
-                              tooltip: 'Move up',
-                              icon: const Icon(Icons.keyboard_arrow_up_rounded),
-                              color: Colors.white54,
-                              onPressed: index == 0
-                                  ? null
-                                  : () => setState(() {
-                                      final item = _order.removeAt(index);
-                                      _order.insert(index - 1, item);
-                                    }),
-                            ),
-                            IconButton(
-                              tooltip: 'Move down',
-                              icon: const Icon(
-                                Icons.keyboard_arrow_down_rounded,
-                              ),
-                              color: Colors.white54,
-                              onPressed: index == _order.length - 1
-                                  ? null
-                                  : () => setState(() {
-                                      final item = _order.removeAt(index);
-                                      _order.insert(index + 1, item);
-                                    }),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                    const Spacer(),
+                    AdaptiveButton(
+                      label: 'Done',
+                      shrinkWrap: true,
+                      onPressed: () => Navigator.of(context).pop((
+                        order: _order.map((l) => l.id).toList(),
+                        hidden: _hidden.toList(),
+                      )),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Use the arrows to reorder. Tap the eye to hide a library from the sidebar.',
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: _LibraryEditorList(
+                    order: _order,
+                    hidden: _hidden,
+                    onToggleHidden: _toggleHidden,
+                    onMove: _move,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  void _toggleHidden(JellyfinLibrary lib) {
+    setState(() {
+      if (_hidden.contains(lib.id)) {
+        _hidden.remove(lib.id);
+      } else {
+        _hidden.add(lib.id);
+      }
+    });
+  }
+
+  void _move(int from, int to) {
+    setState(() {
+      final item = _order.removeAt(from);
+      _order.insert(to, item);
+    });
+  }
+}
+
+class _LibraryEditorList extends StatelessWidget {
+  const _LibraryEditorList({
+    required this.order,
+    required this.hidden,
+    required this.onToggleHidden,
+    required this.onMove,
+  });
+
+  final List<JellyfinLibrary> order;
+  final Set<String> hidden;
+  final ValueChanged<JellyfinLibrary> onToggleHidden;
+  final void Function(int from, int to) onMove;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      itemCount: order.length,
+      itemBuilder: (context, index) {
+        final lib = order[index];
+        final isHidden = hidden.contains(lib.id);
+        return ListTile(
+          key: ValueKey(lib.id),
+          leading: Icon(iconForLibrary(lib.collectionType)),
+          title: Text(
+            lib.name,
+            style: TextStyle(color: isHidden ? Colors.white38 : Colors.white),
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                tooltip: isHidden ? 'Show' : 'Hide',
+                icon: Icon(
+                  isHidden
+                      ? Icons.visibility_off_rounded
+                      : Icons.visibility_rounded,
+                  color: isHidden ? Colors.white38 : AppColors.cyan,
+                ),
+                onPressed: () => onToggleHidden(lib),
+              ),
+              IconButton(
+                tooltip: 'Move up',
+                icon: const Icon(Icons.keyboard_arrow_up_rounded),
+                color: Colors.white54,
+                onPressed: index == 0 ? null : () => onMove(index, index - 1),
+              ),
+              IconButton(
+                tooltip: 'Move down',
+                icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                color: Colors.white54,
+                onPressed: index == order.length - 1
+                    ? null
+                    : () => onMove(index, index + 1),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

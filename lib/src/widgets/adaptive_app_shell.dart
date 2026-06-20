@@ -74,7 +74,9 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
     _bootstrap();
   }
 
-  void _onAccentChanged() { if (mounted) setState(() {}); }
+  void _onAccentChanged() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
@@ -86,7 +88,9 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
     _settings = await AppSettingsStore.load();
     if (!mounted) return;
     final future = _loadLibraries();
-    setState(() => _librariesFuture = future);
+    setState(() {
+      _librariesFuture = future;
+    });
   }
 
   List<JellyfinLibrary> _visible(List<JellyfinLibrary> all) {
@@ -129,22 +133,22 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
     await AppSettingsStore.save(next);
   }
 
+  void _clampSelectedIndex(List<JellyfinLibrary> all) {
+    final destinationCount = _navLibs(all).length + 2;
+    if (destinationCount == 0) return;
+    _selectedIndex = _selectedIndex.clamp(0, destinationCount - 1);
+  }
+
   Future<void> _editLibraries() async {
-    final result =
-        await showAdaptiveSheet<({List<String> order, List<String> hidden})>(
-          context: context,
-          backgroundColor: AppColors.panel,
-          isScrollControlled: true,
-          showDragHandle: true,
-          builder: (_) => LibraryEditorSheet(
-            libraries:
-                _visible(_allLibraries) +
-                _allLibraries
-                    .where((l) => _settings.hiddenLibraries.contains(l.id))
-                    .toList(),
-            hidden: _settings.hiddenLibraries,
-          ),
-        );
+    final result = await showLibraryEditor(
+      context: context,
+      libraries:
+          _visible(_allLibraries) +
+          _allLibraries
+              .where((l) => _settings.hiddenLibraries.contains(l.id))
+              .toList(),
+      hidden: _settings.hiddenLibraries,
+    );
     if (result == null) return;
     await _saveSettings(
       _settings.copyWith(
@@ -152,6 +156,7 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
         hiddenLibraries: result.hidden,
       ),
     );
+    setState(() => _clampSelectedIndex(_allLibraries));
   }
 
   Future<void> _customizeNav(List<JellyfinLibrary> visible) async {
@@ -206,13 +211,17 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
 
         final tabLibs = _navLibs(all);
         final visible = _visible(all);
+        final selectedIndex = _selectedIndex.clamp(0, tabLibs.length + 1);
         final tabs = [
           for (final lib in tabLibs)
             NativeGlassNavBarItem(
               label: lib.name,
               symbol: sfSymbolForLibrary(lib.collectionType),
             ),
-          const NativeGlassNavBarItem(label: 'Search', symbol: 'magnifyingglass'),
+          const NativeGlassNavBarItem(
+            label: 'Search',
+            symbol: 'magnifyingglass',
+          ),
           const NativeGlassNavBarItem(label: 'Settings', symbol: 'gear'),
         ];
 
@@ -341,10 +350,10 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
         return Scaffold(
           extendBody: true,
           backgroundColor: AppColors.background,
-          body: IndexedStack(index: _selectedIndex, children: pages),
+          body: IndexedStack(index: selectedIndex, children: pages),
           bottomNavigationBar: NativeGlassNavBar(
             tabs: tabs,
-            currentIndex: _selectedIndex,
+            currentIndex: selectedIndex,
             onTap: (index) => setState(() => _selectedIndex = index),
             tintColor: AppColors.cyan,
             fallback: cupertino.CupertinoTabBar(
@@ -363,7 +372,7 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
                   label: 'Settings',
                 ),
               ],
-              currentIndex: _selectedIndex,
+              currentIndex: selectedIndex,
               onTap: (index) => setState(() => _selectedIndex = index),
               activeColor: AppColors.cyan,
             ),
@@ -400,7 +409,9 @@ class _NativeMacOSShellState extends State<_NativeMacOSShell> {
     _bootstrap();
   }
 
-  void _onAccentChanged() { if (mounted) setState(() {}); }
+  void _onAccentChanged() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
@@ -412,7 +423,9 @@ class _NativeMacOSShellState extends State<_NativeMacOSShell> {
     _settings = await AppSettingsStore.load();
     if (!mounted) return;
     final future = _loadLibraries();
-    setState(() => _librariesFuture = future);
+    setState(() {
+      _librariesFuture = future;
+    });
   }
 
   List<JellyfinLibrary> _visible(List<JellyfinLibrary> all) {
@@ -455,21 +468,15 @@ class _NativeMacOSShellState extends State<_NativeMacOSShell> {
   }
 
   Future<void> _editLibraries() async {
-    final result =
-        await showAdaptiveSheet<({List<String> order, List<String> hidden})>(
-          context: context,
-          backgroundColor: AppColors.panel,
-          isScrollControlled: true,
-          showDragHandle: true,
-          builder: (_) => LibraryEditorSheet(
-            libraries:
-                _visible(_allLibraries) +
-                _allLibraries
-                    .where((l) => _settings.hiddenLibraries.contains(l.id))
-                    .toList(),
-            hidden: _settings.hiddenLibraries,
-          ),
-        );
+    final result = await showLibraryEditor(
+      context: context,
+      libraries:
+          _visible(_allLibraries) +
+          _allLibraries
+              .where((l) => _settings.hiddenLibraries.contains(l.id))
+              .toList(),
+      hidden: _settings.hiddenLibraries,
+    );
     if (result == null) return;
     await _saveSettings(
       _settings.copyWith(
@@ -530,7 +537,10 @@ class _NativeMacOSShellState extends State<_NativeMacOSShell> {
                       child: Text(
                         'HQFin',
                         style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.3),
+                            ?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
+                            ),
                       ),
                     ),
                     const Divider(height: 1),
@@ -644,7 +654,9 @@ class _WindowsShellState extends State<_WindowsShell> {
     _bootstrap();
   }
 
-  void _onAccentChanged() { if (mounted) setState(() {}); }
+  void _onAccentChanged() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
@@ -656,7 +668,9 @@ class _WindowsShellState extends State<_WindowsShell> {
     _settings = await AppSettingsStore.load();
     if (!mounted) return;
     final future = _loadLibraries();
-    setState(() => _librariesFuture = future);
+    setState(() {
+      _librariesFuture = future;
+    });
   }
 
   List<JellyfinLibrary> _visible(List<JellyfinLibrary> all) {
@@ -699,21 +713,15 @@ class _WindowsShellState extends State<_WindowsShell> {
   }
 
   Future<void> _editLibraries() async {
-    final result =
-        await showAdaptiveSheet<({List<String> order, List<String> hidden})>(
-          context: context,
-          backgroundColor: AppColors.panel,
-          isScrollControlled: true,
-          showDragHandle: true,
-          builder: (_) => LibraryEditorSheet(
-            libraries:
-                _visible(_allLibraries) +
-                _allLibraries
-                    .where((l) => _settings.hiddenLibraries.contains(l.id))
-                    .toList(),
-            hidden: _settings.hiddenLibraries,
-          ),
-        );
+    final result = await showLibraryEditor(
+      context: context,
+      libraries:
+          _visible(_allLibraries) +
+          _allLibraries
+              .where((l) => _settings.hiddenLibraries.contains(l.id))
+              .toList(),
+      hidden: _settings.hiddenLibraries,
+    );
     if (result == null) return;
     await _saveSettings(
       _settings.copyWith(
@@ -771,8 +779,10 @@ class _WindowsShellState extends State<_WindowsShell> {
                     padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
                     child: Text(
                       'HQFin',
-                      style: Theme.of(context).textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.3),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                      ),
                     ),
                   ),
                   const Divider(height: 1),
@@ -883,7 +893,9 @@ class _AndroidShellState extends State<_AndroidShell> {
     _bootstrap();
   }
 
-  void _onAccentChanged() { if (mounted) setState(() {}); }
+  void _onAccentChanged() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
@@ -895,7 +907,9 @@ class _AndroidShellState extends State<_AndroidShell> {
     _settings = await AppSettingsStore.load();
     if (!mounted) return;
     final future = _loadLibraries();
-    setState(() => _librariesFuture = future);
+    setState(() {
+      _librariesFuture = future;
+    });
   }
 
   List<JellyfinLibrary> _visible(List<JellyfinLibrary> all) {
@@ -937,22 +951,22 @@ class _AndroidShellState extends State<_AndroidShell> {
     await AppSettingsStore.save(next);
   }
 
+  void _clampSelectedIndex(List<JellyfinLibrary> all) {
+    final destinationCount = _navLibs(all).length + 1;
+    if (destinationCount == 0) return;
+    _selectedIndex = _selectedIndex.clamp(0, destinationCount - 1);
+  }
+
   Future<void> _editLibraries() async {
-    final result =
-        await showAdaptiveSheet<({List<String> order, List<String> hidden})>(
-          context: context,
-          backgroundColor: AppColors.panel,
-          isScrollControlled: true,
-          showDragHandle: true,
-          builder: (_) => LibraryEditorSheet(
-            libraries:
-                _visible(_allLibraries) +
-                _allLibraries
-                    .where((l) => _settings.hiddenLibraries.contains(l.id))
-                    .toList(),
-            hidden: _settings.hiddenLibraries,
-          ),
-        );
+    final result = await showLibraryEditor(
+      context: context,
+      libraries:
+          _visible(_allLibraries) +
+          _allLibraries
+              .where((l) => _settings.hiddenLibraries.contains(l.id))
+              .toList(),
+      hidden: _settings.hiddenLibraries,
+    );
     if (result == null) return;
     await _saveSettings(
       _settings.copyWith(
@@ -960,11 +974,11 @@ class _AndroidShellState extends State<_AndroidShell> {
         hiddenLibraries: result.hidden,
       ),
     );
+    setState(() => _clampSelectedIndex(_allLibraries));
   }
 
   @override
   Widget build(BuildContext context) {
-    final accent = AppColors.accent;
     return FutureBuilder<List<JellyfinLibrary>>(
       future: _librariesFuture,
       builder: (context, snapshot) {
@@ -998,6 +1012,7 @@ class _AndroidShellState extends State<_AndroidShell> {
         }
 
         final tabLibs = _navLibs(all);
+        final selectedIndex = _selectedIndex.clamp(0, tabLibs.length);
 
         final pages = [
           for (final lib in tabLibs)
@@ -1060,11 +1075,10 @@ class _AndroidShellState extends State<_AndroidShell> {
               ),
             ],
           ),
-          body: IndexedStack(index: _selectedIndex, children: pages),
+          body: IndexedStack(index: selectedIndex, children: pages),
           bottomNavigationBar: NavigationBar(
-            selectedIndex: _selectedIndex,
+            selectedIndex: selectedIndex,
             onDestinationSelected: (i) => setState(() => _selectedIndex = i),
-            indicatorColor: accent.withValues(alpha: 0.2),
             backgroundColor: AppColors.background.withValues(alpha: 0.92),
             destinations: [
               for (final lib in tabLibs)
@@ -1132,9 +1146,7 @@ class _MacOSSidebarItem extends StatelessWidget {
             child: Row(
               children: [
                 DefaultTextStyle.merge(
-                  style: TextStyle(
-                    color: selected ? accent : Colors.white70,
-                  ),
+                  style: TextStyle(color: selected ? accent : Colors.white70),
                   child: icon,
                 ),
                 const SizedBox(width: 12),

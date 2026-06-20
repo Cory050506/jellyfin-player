@@ -192,10 +192,14 @@ class JellyfinItem {
     final tags = json['ImageTags'] as Map<String, dynamic>? ?? {};
     final backdropTags = json['BackdropImageTags'] as List<dynamic>? ?? [];
     final blurHashes = json['ImageBlurHashes'] as Map<String, dynamic>? ?? {};
-    final primaryBlurhashMap = blurHashes['Primary'] as Map<String, dynamic>? ?? {};
-    final backdropBlurhashMap = blurHashes['Backdrop'] as Map<String, dynamic>? ?? {};
+    final primaryBlurhashMap =
+        blurHashes['Primary'] as Map<String, dynamic>? ?? {};
+    final backdropBlurhashMap =
+        blurHashes['Backdrop'] as Map<String, dynamic>? ?? {};
     final primaryTag = tags['Primary'] as String?;
-    final backdropTag2 = backdropTags.isEmpty ? null : backdropTags.first as String?;
+    final backdropTag2 = backdropTags.isEmpty
+        ? null
+        : backdropTags.first as String?;
     final mediaSources = json['MediaSources'] as List<dynamic>? ?? [];
     final userData = json['UserData'] as Map<String, dynamic>? ?? {};
     final streams = mediaSources.isEmpty
@@ -232,8 +236,12 @@ class JellyfinItem {
             (person) => JellyfinPerson.fromJson(person as Map<String, dynamic>),
           )
           .toList(),
-      primaryBlurHash: primaryTag != null ? primaryBlurhashMap[primaryTag] as String? : null,
-      backdropBlurHash: backdropTag2 != null ? backdropBlurhashMap[backdropTag2] as String? : null,
+      primaryBlurHash: primaryTag != null
+          ? primaryBlurhashMap[primaryTag] as String?
+          : null,
+      backdropBlurHash: backdropTag2 != null
+          ? backdropBlurhashMap[backdropTag2] as String?
+          : null,
     );
   }
 }
@@ -336,7 +344,7 @@ class AppSettings {
     subtitleMode: DefaultSubtitleMode.auto,
     preferredAudioLanguage: '',
     subtitleOffsetMs: 0,
-    playerFit: PlayerFit.contain,
+    playerFit: PlayerFit.cover,
     sidebarCollapsed: false,
     libraryOrder: <String>[],
     hiddenLibraries: <String>[],
@@ -352,6 +360,7 @@ class AppSettings {
   final bool hardwareDecoding;
   final HdrMode hdrMode;
   final DefaultSubtitleMode subtitleMode;
+
   /// ISO 639 language code or display name, e.g. "eng", "en", "English".
   /// Empty string means use the file's default track.
   final String preferredAudioLanguage;
@@ -360,19 +369,26 @@ class AppSettings {
 
   /// Whether the home-screen sidebar shows icons only.
   final bool sidebarCollapsed;
+
   /// Library ids in the user's preferred display order. Ids not listed fall
   /// back to the server's order, after the listed ones.
   final List<String> libraryOrder;
+
   /// Library ids the user has chosen to hide from the sidebar.
   final List<String> hiddenLibraries;
+
   /// Library ids pinned to the iOS nav bar (max 4). Empty = auto first 4.
   final List<String> pinnedNavLibraries;
+
   /// Seconds to skip back/forward in the player controls.
   final int skipDurationSeconds;
+
   /// Whether to automatically play the next episode when one finishes.
   final bool autoPlayNextEpisode;
+
   /// What to do when an item has a saved resume position.
   final ResumeBehavior resumeBehavior;
+
   /// Accent color as ARGB int, or null to use the default cyan.
   final int? accentColor;
 
@@ -422,7 +438,9 @@ class AppSettings {
       skipDurationSeconds: skipDurationSeconds ?? this.skipDurationSeconds,
       autoPlayNextEpisode: autoPlayNextEpisode ?? this.autoPlayNextEpisode,
       resumeBehavior: resumeBehavior ?? this.resumeBehavior,
-      accentColor: accentColor == _sentinel ? this.accentColor : accentColor as int?,
+      accentColor: accentColor == _sentinel
+          ? this.accentColor
+          : accentColor as int?,
     );
   }
 

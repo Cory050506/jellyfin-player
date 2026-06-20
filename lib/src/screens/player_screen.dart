@@ -24,7 +24,8 @@ class PlayerScreen extends StatefulWidget {
   State<PlayerScreen> createState() => _PlayerScreenState();
 }
 
-class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver {
+class _PlayerScreenState extends State<PlayerScreen>
+    with WidgetsBindingObserver {
   // media_kit backend (non-iOS)
   Player? _player;
   VideoController? _controller;
@@ -40,6 +41,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
   bool _controlsVisible = true;
   Timer? _hideControlsTimer;
   final FocusNode _focusNode = FocusNode();
+  final GlobalKey _videoSurfaceKey = GlobalKey(debugLabel: 'videoSurface');
   bool _userExitedFullscreen = false;
   // Auto-play countdown (seconds remaining until next episode starts)
   int? _upNextCountdown;
@@ -59,6 +61,14 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    if (!isDesktopPlatform) {
+      unawaited(
+        SystemChrome.setPreferredOrientations([
+          DeviceOrientation.landscapeLeft,
+          DeviceOrientation.landscapeRight,
+        ]),
+      );
+    }
     unawaited(WakelockPlus.enable());
     // Don't pause when app goes to background - let PiP take over
     WidgetsBinding.instance.addObserver(this);
@@ -118,15 +128,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
   }
 
   Future<void> _onVideoTap() async {
-    if (_useNativePlayer) {
-      final nc = _nativeController;
-      if (nc == null) return;
-      if (nc.activityState == PlayerActivityState.playing) {
-        await nc.pause();
-      } else {
-        await nc.play();
-      }
-    } else {
+    if (isDesktopPlatform) {
       unawaited(_player?.playOrPause());
     }
     _showControls();
@@ -196,7 +198,8 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
         );
         if (!mounted) return;
         final startAt = await _resolveResumePosition(
-          settings, widget.item.resumePosition,
+          settings,
+          widget.item.resumePosition,
         );
         await ctrl.loadUrl(url: streamUrl, startAt: startAt);
         // Brief delay to ensure video is ready before playing
@@ -230,6 +233,11 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
         _controller = controller;
       });
       await _applyMpvSettings(settings);
+      await _waitForVideoSurfaceReady();
+      if (!mounted || _player != player) {
+        await player.dispose();
+        return;
+      }
       final url = widget.client.streamUrl(
         widget.item,
         settings,
@@ -237,12 +245,10 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
         subtitleStreamIndex: widget.subtitleStreamIndex,
       );
       final startAt = await _resolveResumePosition(
-        settings, widget.item.resumePosition,
+        settings,
+        widget.item.resumePosition,
       );
-      await player.open(
-        Media(url.toString(), start: startAt),
-        play: true,
-      );
+      await player.open(Media(url.toString(), start: startAt), play: true);
       await _applyDefaultTrackSettings(settings);
       unawaited(widget.client.reportPlaybackStart(widget.item));
       _progressTimer = Timer.periodic(
@@ -257,6 +263,28 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
     }
   }
 
+  Future<void> _waitForVideoSurfaceReady() async {
+    if (defaultTargetPlatform != TargetPlatform.android) {
+      await WidgetsBinding.instance.endOfFrame;
+      return;
+    }
+
+    for (var attempt = 0; attempt < 20; attempt++) {
+      await WidgetsBinding.instance.endOfFrame;
+      if (!mounted) return;
+
+      final renderObject = _videoSurfaceKey.currentContext?.findRenderObject();
+      final size = renderObject is RenderBox && renderObject.hasSize
+          ? renderObject.size
+          : Size.zero;
+      if (size.width > 0 && size.height > 0) {
+        await Future<void>.delayed(const Duration(milliseconds: 80));
+        return;
+      }
+
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+    }
+  }
 
   Future<void> _applyMpvSettings(AppSettings settings) async {
     final player = _player;
@@ -264,11 +292,21 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
       return;
     }
     final platform = player.platform as dynamic;
+    final isAndroid = defaultTargetPlatform == TargetPlatform.android;
     final properties = <String, String>{
-      'hwdec': settings.hardwareDecoding ? 'auto-safe' : 'no',
-      'vd-lavc-dr': 'yes',
+      'hwdec': settings.hardwareDecoding
+          ? (isAndroid ? 'auto' : 'auto-safe')
+          : 'no',
+      'vd-lavc-dr': isAndroid ? 'no' : 'yes',
       'demuxer-seekable-cache': 'yes',
+      'demuxer-readahead-secs': isAndroid ? '120' : '60',
       'cache': 'yes',
+      if (isAndroid) ...{
+        'cache-pause': 'yes',
+        'cache-pause-wait': '3',
+        'framedrop': 'vo',
+        'video-sync': 'audio',
+      },
       'sub-delay': (settings.subtitleOffsetMs / 1000).toStringAsFixed(3),
       if (settings.hdrMode == HdrMode.passthrough) ...{
         'target-colorspace-hint': 'yes',
@@ -349,7 +387,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
             .firstWhere((playing) => playing)
             .timeout(const Duration(seconds: 5));
       }
-      await Future<void>.delayed(const Duration(milliseconds: 500));
+      await Future<void>.delayed(const Duration(milliseconds: 1200));
       if (!mounted || _player != player) {
         return;
       }
@@ -360,22 +398,18 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
     }
   }
 
-  /// Waits briefly for mpv to report the tracks it discovered in the opened
-  /// media, falling back to whatever is currently known if it takes too long.
+  /// Polls until mpv reports at least one real (non-auto) audio or subtitle
+  /// track, or gives up after ~6 seconds and returns whatever is known.
   Future<Tracks> _waitForTracks(Player player) async {
-    if (player.state.tracks.audio.length > 2 ||
-        player.state.tracks.subtitle.length > 2) {
-      return player.state.tracks;
+    for (var i = 0; i < 20; i++) {
+      final t = player.state.tracks;
+      // audio always has [auto]; subtitle always has [no, auto].
+      // A real track means length > 1 for audio, > 2 for subtitles.
+      if (t.audio.length > 1 || t.subtitle.length > 2) return t;
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      if (!mounted) break;
     }
-    try {
-      return await player.stream.tracks
-          .firstWhere(
-            (tracks) => tracks.audio.length > 2 || tracks.subtitle.length > 2,
-          )
-          .timeout(const Duration(seconds: 3));
-    } catch (_) {
-      return player.state.tracks;
-    }
+    return player.state.tracks;
   }
 
   /// Finds the position of a selected Jellyfin stream index among streams of
@@ -471,7 +505,10 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
     if (_upNextTimer != null) return;
     setState(() => _upNextCountdown = 15);
     _upNextTimer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (!mounted) { t.cancel(); return; }
+      if (!mounted) {
+        t.cancel();
+        return;
+      }
       final count = (_upNextCountdown ?? 0) - 1;
       if (count <= 0) {
         t.cancel();
@@ -494,10 +531,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
     _cancelUpNextCountdown();
     Navigator.of(context).pushReplacement(
       adaptivePageRoute<void>(
-        builder: (_) => PlayerScreen(
-          client: widget.client,
-          item: next,
-        ),
+        builder: (_) => PlayerScreen(client: widget.client, item: next),
         name: '/player/${next.id}',
       ),
     );
@@ -516,6 +550,16 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
     _focusNode.dispose();
     WidgetsBinding.instance.removeObserver(this);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    if (!isDesktopPlatform) {
+      unawaited(
+        SystemChrome.setPreferredOrientations([
+          DeviceOrientation.portraitUp,
+          DeviceOrientation.portraitDown,
+          DeviceOrientation.landscapeLeft,
+          DeviceOrientation.landscapeRight,
+        ]),
+      );
+    }
     unawaited(WakelockPlus.disable());
     unawaited(_reportStopped());
     _nativeController?.dispose();
@@ -533,15 +577,13 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
     super.dispose();
   }
 
-  Duration get _currentPosition =>
-      _useNativePlayer
-          ? (_nativeController?.currentPosition ?? Duration.zero)
-          : (_player?.state.position ?? Duration.zero);
+  Duration get _currentPosition => _useNativePlayer
+      ? (_nativeController?.currentPosition ?? Duration.zero)
+      : (_player?.state.position ?? Duration.zero);
 
-  bool get _currentlyPlaying =>
-      _useNativePlayer
-          ? (_nativeController?.activityState == PlayerActivityState.playing)
-          : (_player?.state.playing ?? false);
+  bool get _currentlyPlaying => _useNativePlayer
+      ? (_nativeController?.activityState == PlayerActivityState.playing)
+      : (_player?.state.playing ?? false);
 
   Future<void> _reportProgress() async {
     if (_useNativePlayer && _nativeController == null) return;
@@ -553,7 +595,8 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
         position: pos,
         paused: !_currentlyPlaying,
       );
-      if (defaultTargetPlatform == TargetPlatform.windows && !_useNativePlayer) {
+      if (defaultTargetPlatform == TargetPlatform.windows &&
+          !_useNativePlayer) {
         final duration = _player?.state.duration ?? Duration.zero;
         if (duration.inSeconds > 0) {
           final progress = pos.inMilliseconds / duration.inMilliseconds;
@@ -590,15 +633,14 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
       final itemId = widget.item.id;
       final ticks = (pos.inMicroseconds ~/ 10).toString();
       debugPrint('reportStopped: $itemId at ${pos.inSeconds}s ($ticks ticks)');
-      await widget.client.reportPlaybackStopped(
-        widget.item,
-        position: pos,
-      );
+      await widget.client.reportPlaybackStopped(widget.item, position: pos);
       debugPrint('reportStopped success');
     } catch (e) {
       debugPrint('reportStopped error: $e');
     }
   }
+
+  BoxFit _effectiveVideoFit(AppSettings settings) => settings.boxFit;
 
   @override
   Widget build(BuildContext context) {
@@ -621,10 +663,12 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
       videoSurface = const CircularProgressIndicator();
       playerReady = false;
     } else {
-      videoSurface = Video(
-        controller: controller,
-        fit: settings.boxFit,
-        controls: NoVideoControls,
+      videoSurface = ExcludeSemantics(
+        child: Video(
+          controller: controller,
+          fit: _effectiveVideoFit(settings),
+          controls: NoVideoControls,
+        ),
       );
       playerReady = player != null;
     }
@@ -656,7 +700,12 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Positioned.fill(child: videoSurface),
+              Positioned.fill(
+                child: SizedBox.expand(
+                  key: _videoSurfaceKey,
+                  child: videoSurface,
+                ),
+              ),
               // iOS uses the native AVPlayerViewController controls, so we skip
               // our own tap detector and chrome (they'd swallow the touches).
               // We keep only a lightweight back button to leave the player.
@@ -691,14 +740,19 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
                                     icon: const Icon(Icons.fullscreen_rounded),
                                     label: const Text('Resume'),
                                     onPressed: () async {
-                                      setState(() => _nativeControlsVisible = false);
+                                      setState(
+                                        () => _nativeControlsVisible = false,
+                                      );
                                       await _nativeController?.play();
-                                      await _nativeController?.enterFullScreen();
+                                      await _nativeController
+                                          ?.enterFullScreen();
                                     },
                                   ),
                                   IconButton.filledTonal(
                                     tooltip: 'Audio tracks',
-                                    icon: const Icon(Icons.spatial_audio_rounded),
+                                    icon: const Icon(
+                                      Icons.spatial_audio_rounded,
+                                    ),
                                     onPressed: _showNativeAudioTracks,
                                   ),
                                   IconButton.filledTonal(
@@ -710,7 +764,9 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
                                       widget.episodeList!.isNotEmpty)
                                     IconButton.filledTonal(
                                       tooltip: 'Episodes',
-                                      icon: const Icon(Icons.playlist_play_rounded),
+                                      icon: const Icon(
+                                        Icons.playlist_play_rounded,
+                                      ),
                                       onPressed: _showEpisodePicker,
                                     ),
                                 ],
@@ -806,8 +862,12 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
                               : isDesktopPlatform
                               ? _toggleFullscreen
                               : null,
-                          onPiP: _useNativePlayer ? _enterPictureInPicture : null,
-                          onEpisodes: widget.episodeList != null && widget.episodeList!.isNotEmpty
+                          onPiP: _useNativePlayer
+                              ? _enterPictureInPicture
+                              : null,
+                          onEpisodes:
+                              widget.episodeList != null &&
+                                  widget.episodeList!.isNotEmpty
                               ? _showEpisodePicker
                               : null,
                         ),
@@ -896,8 +956,9 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
             children: [
               Text(
                 'Episodes',
-                style: Theme.of(ctx).textTheme.titleLarge
-                    ?.copyWith(fontWeight: FontWeight.w800),
+                style: Theme.of(
+                  ctx,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
               ),
               const SizedBox(height: 8),
               Flexible(
@@ -915,7 +976,9 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
                         color: isPlaying ? AppColors.accent : Colors.white54,
                       ),
                       title: Text(ep.displayTitle),
-                      subtitle: ep.subtitle.isNotEmpty ? Text(ep.subtitle) : null,
+                      subtitle: ep.subtitle.isNotEmpty
+                          ? Text(ep.subtitle)
+                          : null,
                       selected: isPlaying,
                       onTap: () async {
                         Navigator.of(ctx).pop();
@@ -925,7 +988,9 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
                             ? await widget.client.getItemDetails(ep.id)
                             : ep;
                         if (!mounted) return;
-                        final nextIdx = index + 1 < list.length ? index + 1 : null;
+                        final nextIdx = index + 1 < list.length
+                            ? index + 1
+                            : null;
                         final nextEp = nextIdx != null ? list[nextIdx] : null;
                         unawaited(_reportStopped());
                         nav.pushReplacement(
@@ -953,70 +1018,49 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
   }
 
   Future<void> _showAudioTracks(Player player) async {
+    // Wait for mpv to report real tracks before opening the sheet.
+    final tracks = await _waitForTracks(player);
+    if (!mounted) return;
+    final selected = player.state.track.audio;
     await showAdaptiveSheet<void>(
       context: context,
       backgroundColor: AppColors.panel,
-      builder: (context) => StreamBuilder<Track>(
-        stream: player.stream.track,
-        initialData: player.state.track,
-        builder: (context, trackSnapshot) => StreamBuilder<Tracks>(
-          stream: player.stream.tracks,
-          initialData: player.state.tracks,
-          builder: (context, tracksSnapshot) {
-            final selected = trackSnapshot.data?.audio;
-            final tracks = uniqueTracks<AudioTrack>([
-              AudioTrack.auto(),
-              ...tracksSnapshot.data?.audio ?? const <AudioTrack>[],
-            ]);
-            return TrackSheet<AudioTrack>(
-              title: 'Audio',
-              tracks: tracks,
-              selected: selected,
-              label: audioTrackLabel,
-              onSelected: (track) async {
-                await player.setAudioTrack(track);
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                }
-              },
-            );
-          },
-        ),
+      builder: (context) => TrackSheet<AudioTrack>(
+        title: 'Audio',
+        tracks: uniqueTracks<AudioTrack>([
+          AudioTrack.auto(),
+          ...tracks.audio,
+        ]),
+        selected: selected,
+        label: audioTrackLabel,
+        onSelected: (track) async {
+          await player.setAudioTrack(track);
+          if (context.mounted) Navigator.of(context).pop();
+        },
       ),
     );
   }
 
   Future<void> _showSubtitleTracks(Player player) async {
+    final tracks = await _waitForTracks(player);
+    if (!mounted) return;
+    final selected = player.state.track.subtitle;
     await showAdaptiveSheet<void>(
       context: context,
       backgroundColor: AppColors.panel,
-      builder: (context) => StreamBuilder<Track>(
-        stream: player.stream.track,
-        initialData: player.state.track,
-        builder: (context, trackSnapshot) => StreamBuilder<Tracks>(
-          stream: player.stream.tracks,
-          initialData: player.state.tracks,
-          builder: (context, tracksSnapshot) {
-            final selected = trackSnapshot.data?.subtitle;
-            final tracks = uniqueTracks<SubtitleTrack>([
-              SubtitleTrack.no(),
-              SubtitleTrack.auto(),
-              ...tracksSnapshot.data?.subtitle ?? const <SubtitleTrack>[],
-            ]);
-            return TrackSheet<SubtitleTrack>(
-              title: 'Subtitles',
-              tracks: tracks,
-              selected: selected,
-              label: subtitleTrackLabel,
-              onSelected: (track) async {
-                await player.setSubtitleTrack(track);
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                }
-              },
-            );
-          },
-        ),
+      builder: (context) => TrackSheet<SubtitleTrack>(
+        title: 'Subtitles',
+        tracks: uniqueTracks<SubtitleTrack>([
+          SubtitleTrack.no(),
+          SubtitleTrack.auto(),
+          ...tracks.subtitle,
+        ]),
+        selected: selected,
+        label: subtitleTrackLabel,
+        onSelected: (track) async {
+          await player.setSubtitleTrack(track);
+          if (context.mounted) Navigator.of(context).pop();
+        },
       ),
     );
   }
@@ -1304,8 +1348,11 @@ class PlayerBottomChrome extends StatelessWidget {
                           IconButton.filledTonal(
                             tooltip: 'Back $skipSeconds seconds',
                             onPressed: () {
-                              final target = position - Duration(seconds: skipSeconds);
-                              onSeek(target < Duration.zero ? Duration.zero : target);
+                              final target =
+                                  position - Duration(seconds: skipSeconds);
+                              onSeek(
+                                target < Duration.zero ? Duration.zero : target,
+                              );
                             },
                             icon: Icon(_replayIcon(skipSeconds)),
                           ),
@@ -1329,7 +1376,8 @@ class PlayerBottomChrome extends StatelessWidget {
                           IconButton.filledTonal(
                             tooltip: 'Forward $skipSeconds seconds',
                             onPressed: () {
-                              final target = position + Duration(seconds: skipSeconds);
+                              final target =
+                                  position + Duration(seconds: skipSeconds);
                               onSeek(target > duration ? duration : target);
                             },
                             icon: Icon(_forwardIcon(skipSeconds)),
@@ -1435,9 +1483,9 @@ class NativeAudioTrackSheet extends StatelessWidget {
           children: [
             Text(
               'Audio',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
             Flexible(
@@ -1516,9 +1564,9 @@ class NativeSubtitleTrackSheet extends StatelessWidget {
           children: [
             Text(
               'Subtitles',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
             Flexible(

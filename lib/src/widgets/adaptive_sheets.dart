@@ -11,10 +11,12 @@ Future<T?> showAdaptiveSheet<T>({
   switch (defaultTargetPlatform) {
     case TargetPlatform.iOS:
     case TargetPlatform.macOS:
-      // Use native Cupertino modal for iOS/macOS
       return cupertino.showCupertinoModalPopup<T>(
         context: context,
-        builder: builder,
+        builder: (ctx) => Material(
+          color: Colors.transparent,
+          child: builder(ctx),
+        ),
       );
     case TargetPlatform.windows:
       // Windows uses a native-style popup dialog
