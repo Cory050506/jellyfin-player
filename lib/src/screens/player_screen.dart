@@ -135,11 +135,38 @@ class _PlayerScreenState extends State<PlayerScreen>
   }
 
   void _handleKeyEvent(KeyEvent event) {
-    if (event is! KeyDownEvent) {
-      return;
-    }
+    if (event is! KeyDownEvent && event is! KeyRepeatEvent) return;
     final key = event.logicalKey;
-    if (key == LogicalKeyboardKey.arrowUp ||
+    if (key == LogicalKeyboardKey.select ||
+        key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter ||
+        key == LogicalKeyboardKey.mediaPlayPause) {
+      _player?.playOrPause();
+      _showControls();
+    } else if (key == LogicalKeyboardKey.arrowLeft ||
+        key == LogicalKeyboardKey.mediaRewind) {
+      final pos = _player?.state.position;
+      if (pos != null) {
+        _player?.seek(
+          Duration(
+            seconds: (pos.inSeconds - 10).clamp(0, double.maxFinite.toInt()),
+          ),
+        );
+      }
+      _showControls();
+    } else if (key == LogicalKeyboardKey.arrowRight ||
+        key == LogicalKeyboardKey.mediaFastForward) {
+      final pos = _player?.state.position;
+      final dur = _player?.state.duration;
+      if (pos != null && dur != null) {
+        _player?.seek(
+          Duration(
+            seconds: (pos.inSeconds + 10).clamp(0, dur.inSeconds),
+          ),
+        );
+      }
+      _showControls();
+    } else if (key == LogicalKeyboardKey.arrowUp ||
         key == LogicalKeyboardKey.arrowDown) {
       _toggleControls();
     } else if (_controlsVisible) {
@@ -820,11 +847,16 @@ class _PlayerScreenState extends State<PlayerScreen>
                   ),
                 ],
               ] else ...[
-                // Tap anywhere to toggle play/pause; show controls briefly.
+                // Tap to toggle controls (desktop: also play/pause on single tap,
+              // fullscreen on double-tap). Using opaque so button taps in the
+              // chrome rows above are NOT also routed here.
                 Positioned.fill(
                   child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
+                    behavior: HitTestBehavior.opaque,
                     onTap: _onVideoTap,
+                    onDoubleTap: isDesktopPlatform
+                        ? () => unawaited(_toggleFullscreen())
+                        : null,
                   ),
                 ),
                 Positioned(

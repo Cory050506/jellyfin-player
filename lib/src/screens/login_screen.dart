@@ -215,6 +215,7 @@ class _LoginPanel extends StatelessWidget {
                 icon: Icons.dns_rounded,
                 keyboardType: TextInputType.url,
                 textInputAction: TextInputAction.next,
+                onSubmitted: (_) => FocusScope.of(context).nextFocus(),
               ),
               const SizedBox(height: 12),
               AdaptiveTextField(
@@ -222,6 +223,7 @@ class _LoginPanel extends StatelessWidget {
                 placeholder: 'Username',
                 icon: Icons.person_rounded,
                 textInputAction: TextInputAction.next,
+                onSubmitted: (_) => FocusScope.of(context).nextFocus(),
               ),
               const SizedBox(height: 12),
               AdaptiveTextField(
