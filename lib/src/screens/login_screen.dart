@@ -214,8 +214,34 @@ class _LoginPanelState extends State<_LoginPanel> {
       ),
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: FocusTraversalGroup(
-          policy: OrderedTraversalPolicy(),
+        child: Focus(
+          // Catch D-pad up/down that bubble up from TextFields (single-line
+          // TextFields don't use vertical arrow keys, so they bubble here).
+          canRequestFocus: false,
+          skipTraversal: true,
+          onKeyEvent: (node, event) {
+            if (event is! KeyDownEvent) return KeyEventResult.ignored;
+            if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+              if (_serverFocus.hasPrimaryFocus) {
+                _usernameFocus.requestFocus();
+                return KeyEventResult.handled;
+              }
+              if (_usernameFocus.hasPrimaryFocus) {
+                _passwordFocus.requestFocus();
+                return KeyEventResult.handled;
+              }
+            } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+              if (_passwordFocus.hasPrimaryFocus) {
+                _usernameFocus.requestFocus();
+                return KeyEventResult.handled;
+              }
+              if (_usernameFocus.hasPrimaryFocus) {
+                _serverFocus.requestFocus();
+                return KeyEventResult.handled;
+              }
+            }
+            return KeyEventResult.ignored;
+          },
           child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -232,42 +258,33 @@ class _LoginPanelState extends State<_LoginPanel> {
               style: TextStyle(color: Colors.white60),
             ),
             const SizedBox(height: 24),
-            FocusTraversalOrder(
-              order: const NumericFocusOrder(1),
-              child: AdaptiveTextField(
-                controller: widget.serverController,
-                focusNode: _serverFocus,
-                placeholder: 'Server URL',
-                icon: Icons.dns_rounded,
-                keyboardType: TextInputType.url,
-                textInputAction: TextInputAction.next,
-                onSubmitted: (_) => _usernameFocus.requestFocus(),
-              ),
+            AdaptiveTextField(
+              controller: widget.serverController,
+              focusNode: _serverFocus,
+              placeholder: 'Server URL',
+              icon: Icons.dns_rounded,
+              keyboardType: TextInputType.url,
+              textInputAction: TextInputAction.next,
+              onSubmitted: (_) => _usernameFocus.requestFocus(),
             ),
             const SizedBox(height: 12),
-            FocusTraversalOrder(
-              order: const NumericFocusOrder(2),
-              child: AdaptiveTextField(
-                controller: widget.usernameController,
-                focusNode: _usernameFocus,
-                placeholder: 'Username',
-                icon: Icons.person_rounded,
-                textInputAction: TextInputAction.next,
-                onSubmitted: (_) => _passwordFocus.requestFocus(),
-              ),
+            AdaptiveTextField(
+              controller: widget.usernameController,
+              focusNode: _usernameFocus,
+              placeholder: 'Username',
+              icon: Icons.person_rounded,
+              textInputAction: TextInputAction.next,
+              onSubmitted: (_) => _passwordFocus.requestFocus(),
             ),
             const SizedBox(height: 12),
-            FocusTraversalOrder(
-              order: const NumericFocusOrder(3),
-              child: AdaptiveTextField(
-                controller: widget.passwordController,
-                focusNode: _passwordFocus,
-                placeholder: 'Password',
-                icon: Icons.lock_rounded,
-                obscureText: true,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => widget.onSignIn(),
-              ),
+            AdaptiveTextField(
+              controller: widget.passwordController,
+              focusNode: _passwordFocus,
+              placeholder: 'Password',
+              icon: Icons.lock_rounded,
+              obscureText: true,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => widget.onSignIn(),
             ),
             if (widget.error != null) ...[
               const SizedBox(height: 14),
@@ -277,13 +294,10 @@ class _LoginPanelState extends State<_LoginPanel> {
               ),
             ],
             const SizedBox(height: 20),
-            FocusTraversalOrder(
-              order: const NumericFocusOrder(4),
-              child: AdaptiveButton(
-                label: widget.busy ? 'Connecting…' : 'Connect',
-                icon: Icons.login_rounded,
-                onPressed: widget.busy ? null : widget.onSignIn,
-              ),
+            AdaptiveButton(
+              label: widget.busy ? 'Connecting…' : 'Connect',
+              icon: Icons.login_rounded,
+              onPressed: widget.busy ? null : widget.onSignIn,
             ),
           ],
         ),
