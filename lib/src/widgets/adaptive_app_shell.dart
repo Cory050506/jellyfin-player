@@ -1060,42 +1060,103 @@ class _AndroidShellState extends State<_AndroidShell> {
           ),
         ];
 
+        // Destination indices: 0..tabLibs.length-1 = libraries,
+        // tabLibs.length = Settings.
+        // Search is a floating action in the rail (not an indexed page).
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
             navigationMode: NavigationMode.directional,
           ),
           child: Scaffold(
-          extendBody: true,
-          appBar: AppBar(
-            title: const Text('HQFin'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.search_rounded),
-                tooltip: 'Search',
-                onPressed: () => Navigator.of(context).pushAdaptive<void>(
-                  builder: (_) => SearchScreen(client: _client),
-                  name: '/search',
+            body: Row(
+              children: [
+                // ── Left navigation rail ──────────────────────────────────
+                NavigationRail(
+                  extended: true,
+                  selectedIndex: selectedIndex,
+                  onDestinationSelected: (i) =>
+                      setState(() => _selectedIndex = i),
+                  backgroundColor: AppColors.panelRaised,
+                  leading: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.asset(
+                            'assets/icon.png',
+                            width: 40,
+                            height: 40,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'HQFin',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(height: 20),
+                        // Search button lives at the top of the rail
+                        TextButton.icon(
+                          onPressed: () =>
+                              Navigator.of(context).pushAdaptive<void>(
+                            builder: (_) => SearchScreen(client: _client),
+                            name: '/search',
+                          ),
+                          icon: const Icon(Icons.search_rounded),
+                          label: const Text('Search'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.white70,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                    ),
+                  ),
+                  trailing: Padding(
+                    padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
+                    child: TextButton.icon(
+                      onPressed: widget.onSignedOut,
+                      icon: const Icon(Icons.logout_rounded),
+                      label: const Text('Sign Out'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.redAccent,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                      ),
+                    ),
+                  ),
+                  destinations: [
+                    for (final lib in tabLibs)
+                      NavigationRailDestination(
+                        icon: Icon(iconForLibrary(lib.collectionType)),
+                        label: Text(lib.name),
+                      ),
+                    const NavigationRailDestination(
+                      icon: Icon(Icons.settings_rounded),
+                      label: Text('Settings'),
+                    ),
+                  ],
                 ),
-              ),
-            ],
-          ),
-          body: IndexedStack(index: selectedIndex, children: pages),
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: selectedIndex,
-            onDestinationSelected: (i) => setState(() => _selectedIndex = i),
-            backgroundColor: AppColors.background.withValues(alpha: 0.92),
-            destinations: [
-              for (final lib in tabLibs)
-                NavigationDestination(
-                  icon: Icon(iconForLibrary(lib.collectionType)),
-                  label: lib.name,
+                const VerticalDivider(width: 1, thickness: 1),
+                // ── Main content ──────────────────────────────────────────
+                Expanded(
+                  child: IndexedStack(
+                    index: selectedIndex,
+                    children: pages,
+                  ),
                 ),
-              const NavigationDestination(
-                icon: Icon(Icons.settings_rounded),
-                label: 'Settings',
-              ),
-            ],
-          ),
+              ],
+            ),
           ),
         );
       },
