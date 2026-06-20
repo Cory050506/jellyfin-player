@@ -886,6 +886,7 @@ class _AndroidShellState extends State<_AndroidShell> {
   AppSettings _settings = AppSettings.defaults;
   int _selectedIndex = 0;
   bool _isTV = false;
+  bool _railExtended = true;
 
   @override
   void initState() {
@@ -1079,7 +1080,7 @@ class _AndroidShellState extends State<_AndroidShell> {
               body: Row(
                 children: [
                   NavigationRail(
-                    extended: true,
+                    extended: _railExtended,
                     selectedIndex: selectedIndex,
                     onDestinationSelected: (i) =>
                         setState(() => _selectedIndex = i),
@@ -1153,7 +1154,14 @@ class _AndroidShellState extends State<_AndroidShell> {
                   ),
                   const VerticalDivider(width: 1, thickness: 1),
                   Expanded(
-                    child: IndexedStack(index: selectedIndex, children: pages),
+                    child: Focus(
+                      canRequestFocus: false,
+                      skipTraversal: true,
+                      onFocusChange: (hasFocus) {
+                        if (mounted) setState(() => _railExtended = !hasFocus);
+                      },
+                      child: IndexedStack(index: selectedIndex, children: pages),
+                    ),
                   ),
                 ],
               ),

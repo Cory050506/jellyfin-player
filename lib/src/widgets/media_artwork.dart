@@ -213,6 +213,10 @@ class _MediaTileState extends State<MediaTile> {
                           Image.network(
                             widget.imageUrl.toString(),
                             fit: BoxFit.cover,
+                            // Decode at 2× the max display size (360px) to
+                            // avoid decoding full-resolution posters for every
+                            // grid card — this is what causes frame skipping.
+                            cacheWidth: 360,
                             frameBuilder: widget.item.primaryBlurHash != null
                                 ? (ctx, child, frame, loaded) => frame == null
                                     ? BlurHash(hash: widget.item.primaryBlurHash!)

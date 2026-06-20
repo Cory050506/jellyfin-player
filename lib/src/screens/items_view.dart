@@ -87,10 +87,10 @@ class _ItemsViewState extends State<ItemsView> {
                 padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
                 sliver: SliverGrid.builder(
                   gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: isTV ? 320 : 214,
-                    mainAxisSpacing: 18,
-                    crossAxisSpacing: 18,
-                    childAspectRatio: isTV ? 0.58 : 0.6,
+                    maxCrossAxisExtent: isTV ? 180 : 214,
+                    mainAxisSpacing: isTV ? 24 : 18,
+                    crossAxisSpacing: isTV ? 24 : 18,
+                    childAspectRatio: 0.6,
                   ),
                   itemCount: items.length,
                   itemBuilder: (context, index) {
