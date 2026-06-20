@@ -27,6 +27,7 @@ import 'package:flutter_window_close/flutter_window_close.dart';
 import 'package:windows_taskbar/windows_taskbar.dart';
 import 'package:flutter_blurhash/flutter_blurhash.dart';
 import 'package:touch_bar/touch_bar.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 part 'src/app.dart';
 part 'src/models.dart';

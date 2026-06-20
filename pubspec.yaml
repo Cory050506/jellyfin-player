@@ -63,6 +63,7 @@ dependencies:
   windows_taskbar: any
   flutter_blurhash: any
   draggable_scrollbar: any
+  device_info_plus: ^11.3.0
 
 dev_dependencies:
   flutter_test:
