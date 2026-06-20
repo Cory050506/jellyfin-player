@@ -1,29 +1,9 @@
 part of '../../main.dart';
 
-/// macOS touchbar integration for media controls
+/// macOS Touch Bar integration — actual controls are set up in PlayerScreen
+/// using the touch_bar package directly (setTouchBar / TouchBarButton).
 class MacOSTouchBar {
   static final MacOSTouchBar _instance = MacOSTouchBar._internal();
-
-  factory MacOSTouchBar() {
-    return _instance;
-  }
-
+  factory MacOSTouchBar() => _instance;
   MacOSTouchBar._internal();
-
-  /// Initialize touchbar with media controls
-  Future<void> initialize({
-    required VoidCallback onPlayPause,
-    required VoidCallback onNext,
-    required VoidCallback onPrevious,
-  }) async {
-    if (!Platform.isMacOS) return;
-
-    try {
-      // Note: touch_bar package provides basic touchbar support
-      // You can customize with play/pause, next, previous buttons
-      debugPrint('✅ macOS touchbar initialized');
-    } catch (e) {
-      debugPrint('❌ Failed to initialize touchbar: $e');
-    }
-  }
 }

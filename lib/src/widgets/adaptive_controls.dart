@@ -13,14 +13,27 @@ bool get _isMacOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.macOS;
 
 /// Wraps a fluent_ui control so it has the required FluentTheme ancestor
 /// without converting the whole app to a FluentApp.
-Widget _fluentScope(Widget child) => fluent.FluentTheme(
-  data: fluent.FluentThemeData.dark(),
-  child: child,
-);
+Widget _fluentScope(Widget child) {
+  final accent = AppColors.accent;
+  return fluent.FluentTheme(
+    data: fluent.FluentThemeData.dark().copyWith(
+      accentColor: fluent.AccentColor.swatch({
+        'darkest': accent,
+        'darker': accent,
+        'dark': accent,
+        'normal': accent,
+        'light': accent,
+        'lighter': accent,
+        'lightest': accent,
+      }),
+    ),
+    child: child,
+  );
+}
 
 /// Wraps a macos_ui control so it has the required MacosTheme ancestor.
 Widget _macosScope(Widget child) => macos.MacosTheme(
-  data: macos.MacosThemeData.dark(),
+  data: macos.MacosThemeData.dark().copyWith(primaryColor: AppColors.accent),
   child: child,
 );
 
@@ -172,17 +185,15 @@ class AdaptiveDropdown<T> extends StatelessWidget {
       );
     }
     if (_isWindows) {
-      return _fluentScope(
-        fluent.ComboBox<T>(
-          value: value,
-          items: [
-            for (final v in values)
-              fluent.ComboBoxItem<T>(value: v, child: Text(label(v))),
-          ],
-          onChanged: (v) {
-            if (v != null) onChanged(v);
-          },
-        ),
+      return DropdownButton<T>(
+        value: value,
+        items: [
+          for (final v in values)
+            DropdownMenuItem<T>(value: v, child: Text(label(v))),
+        ],
+        onChanged: (v) {
+          if (v != null) onChanged(v);
+        },
       );
     }
     if (_isMacOS) {

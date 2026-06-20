@@ -70,7 +70,16 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
   @override
   void initState() {
     super.initState();
+    AppColors.accentNotifier.addListener(_onAccentChanged);
     _bootstrap();
+  }
+
+  void _onAccentChanged() { if (mounted) setState(() {}); }
+
+  @override
+  void dispose() {
+    AppColors.accentNotifier.removeListener(_onAccentChanged);
+    super.dispose();
   }
 
   Future<void> _bootstrap() async {
@@ -380,7 +389,16 @@ class _NativeMacOSShellState extends State<_NativeMacOSShell> {
   @override
   void initState() {
     super.initState();
+    AppColors.accentNotifier.addListener(_onAccentChanged);
     _bootstrap();
+  }
+
+  void _onAccentChanged() { if (mounted) setState(() {}); }
+
+  @override
+  void dispose() {
+    AppColors.accentNotifier.removeListener(_onAccentChanged);
+    super.dispose();
   }
 
   Future<void> _bootstrap() async {
@@ -501,45 +519,31 @@ class _NativeMacOSShellState extends State<_NativeMacOSShell> {
                 child: Column(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: AppColors.cyan.withValues(alpha: 0.16),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Icon(
-                              Icons.play_arrow_rounded,
-                              color: AppColors.cyan,
-                              size: 18,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Jellyfin',
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                          ),
-                        ],
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+                      child: Text(
+                        'HQFin',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.3),
                       ),
                     ),
                     const Divider(height: 1),
                     Expanded(
-                      child: ListView(
+                      child: SingleChildScrollView(
                         padding: const EdgeInsets.all(8),
-                        children: [
-                          for (final lib in visible)
-                            _MacOSSidebarItem(
-                              icon: Icon(iconForLibrary(lib.collectionType)),
-                              label: lib.name,
-                              selected: lib.id == _selectedLibrary?.id,
-                              onTap: () => _selectLibrary(lib),
-                            ),
-                        ],
+                        physics: visible.length > 10
+                            ? const AlwaysScrollableScrollPhysics()
+                            : const NeverScrollableScrollPhysics(),
+                        child: Column(
+                          children: [
+                            for (final lib in visible)
+                              _MacOSSidebarItem(
+                                icon: Icon(iconForLibrary(lib.collectionType)),
+                                label: lib.name,
+                                selected: lib.id == _selectedLibrary?.id,
+                                onTap: () => _selectLibrary(lib),
+                              ),
+                          ],
+                        ),
                       ),
                     ),
                     const Divider(height: 1),
@@ -619,7 +623,16 @@ class _WindowsShellState extends State<_WindowsShell> {
   @override
   void initState() {
     super.initState();
+    AppColors.accentNotifier.addListener(_onAccentChanged);
     _bootstrap();
+  }
+
+  void _onAccentChanged() { if (mounted) setState(() {}); }
+
+  @override
+  void dispose() {
+    AppColors.accentNotifier.removeListener(_onAccentChanged);
+    super.dispose();
   }
 
   Future<void> _bootstrap() async {
@@ -737,18 +750,32 @@ class _WindowsShellState extends State<_WindowsShell> {
               width: 200,
               child: Column(
                 children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+                    child: Text(
+                      'HQFin',
+                      style: Theme.of(context).textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -0.3),
+                    ),
+                  ),
+                  const Divider(height: 1),
                   Expanded(
-                    child: ListView(
+                    child: SingleChildScrollView(
                       padding: const EdgeInsets.all(8),
-                      children: [
-                        for (final lib in visible)
-                          _SidebarItem(
-                            icon: iconForLibrary(lib.collectionType),
-                            label: lib.name,
-                            selected: lib.id == _selectedLibrary?.id,
-                            onTap: () => _selectLibrary(lib),
-                          ),
-                      ],
+                      physics: visible.length > 10
+                          ? const AlwaysScrollableScrollPhysics()
+                          : const NeverScrollableScrollPhysics(),
+                      child: Column(
+                        children: [
+                          for (final lib in visible)
+                            _SidebarItem(
+                              icon: iconForLibrary(lib.collectionType),
+                              label: lib.name,
+                              selected: lib.id == _selectedLibrary?.id,
+                              onTap: () => _selectLibrary(lib),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                   Padding(
@@ -825,7 +852,16 @@ class _AndroidShellState extends State<_AndroidShell> {
   @override
   void initState() {
     super.initState();
+    AppColors.accentNotifier.addListener(_onAccentChanged);
     _bootstrap();
+  }
+
+  void _onAccentChanged() { if (mounted) setState(() {}); }
+
+  @override
+  void dispose() {
+    AppColors.accentNotifier.removeListener(_onAccentChanged);
+    super.dispose();
   }
 
   Future<void> _bootstrap() async {
@@ -1037,6 +1073,7 @@ class _MacOSSidebarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = AppColors.accent;
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Material(
@@ -1048,7 +1085,7 @@ class _MacOSSidebarItem extends StatelessWidget {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: selected
-                  ? AppColors.cyan.withValues(alpha: 0.16)
+                  ? accent.withValues(alpha: 0.16)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(6),
             ),
@@ -1056,7 +1093,7 @@ class _MacOSSidebarItem extends StatelessWidget {
               children: [
                 DefaultTextStyle.merge(
                   style: TextStyle(
-                    color: selected ? AppColors.cyan : Colors.white70,
+                    color: selected ? accent : Colors.white70,
                   ),
                   child: icon,
                 ),
@@ -1132,6 +1169,7 @@ class _SidebarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = AppColors.accent;
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Material(
@@ -1143,13 +1181,13 @@ class _SidebarItem extends StatelessWidget {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: selected
-                  ? AppColors.cyan.withValues(alpha: 0.16)
+                  ? accent.withValues(alpha: 0.16)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(6),
             ),
             child: Row(
               children: [
-                Icon(icon, color: selected ? AppColors.cyan : Colors.white70),
+                Icon(icon, color: selected ? accent : Colors.white70),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(

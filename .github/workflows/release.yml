@@ -51,11 +51,16 @@ jobs:
           codesign --deep --force --sign "HQFin" "$APP" || \
           codesign --deep --force --sign "-" "$APP"
 
-      - name: Package as zip
+      - name: Package as DMG
         run: |
-          cd build/macos/Build/Products/Release
-          APP=$(find . -name "*.app" -maxdepth 1 | head -1 | sed 's|./||')
-          zip -r --symlinks hqfin-macos.zip "$APP"
+          APP=$(find build/macos/Build/Products/Release -name "*.app" -maxdepth 1 | head -1)
+          APPNAME=$(basename "$APP")
+          mkdir -p /tmp/dmg-staging
+          cp -r "$APP" /tmp/dmg-staging/
+          ln -s /Applications /tmp/dmg-staging/Applications
+          hdiutil create -volname "HQFin" -srcfolder /tmp/dmg-staging \
+            -ov -format UDZO /tmp/hqfin-macos.dmg
+          cp /tmp/hqfin-macos.dmg build/macos/Build/Products/Release/hqfin-macos.dmg
 
       - name: Sign update with Sparkle EdDSA key
         id: sign
@@ -70,16 +75,16 @@ jobs:
           fi
           echo "$SPARKLE_PRIVATE_KEY" > /tmp/sparkle_private.pem
           SIGNATURE=$(openssl pkeyutl -sign -inkey /tmp/sparkle_private.pem \
-            -rawin -in build/macos/Build/Products/Release/hqfin-macos.zip \
+            -rawin -in build/macos/Build/Products/Release/hqfin-macos.dmg \
             | base64 | tr -d '\n')
-          SIZE=$(stat -f%z build/macos/Build/Products/Release/hqfin-macos.zip)
+          SIZE=$(stat -f%z build/macos/Build/Products/Release/hqfin-macos.dmg)
           echo "signature=$SIGNATURE" >> $GITHUB_OUTPUT
           echo "size=$SIZE" >> $GITHUB_OUTPUT
 
       - uses: actions/upload-artifact@v7
         with:
           name: macos
-          path: build/macos/Build/Products/Release/hqfin-macos.zip
+          path: build/macos/Build/Products/Release/hqfin-macos.dmg
 
   # ── iOS ────────────────────────────────────────────────────────────────────
   build-ios:
@@ -165,16 +170,19 @@ jobs:
       - name: Build Windows
         run: flutter build windows --release
 
-      - name: Package as zip
-        shell: pwsh
+      - name: Install NSIS
+        run: choco install nsis -y
+
+      - name: Build installer
+        shell: cmd
         run: |
-          Compress-Archive -Path build\windows\x64\runner\Release\* `
-            -DestinationPath hqfin-windows.zip
+          cd windows
+          makensis installer.nsi
 
       - uses: actions/upload-artifact@v7
         with:
           name: windows
-          path: hqfin-windows.zip
+          path: windows\hqfin-setup.exe
 
   # ── Release + appcast ──────────────────────────────────────────────────────
   release:
@@ -204,10 +212,10 @@ jobs:
           make_latest: true
           fail_on_unmatched_files: false
           files: |
-            artifacts/macos/hqfin-macos.zip
+            artifacts/macos/hqfin-macos.dmg
             artifacts/ios/hqfin.ipa
             artifacts/android/app-release.apk
-            artifacts/windows/hqfin-windows.zip
+            artifacts/windows/hqfin-setup.exe
 
       - name: Update appcast.xml
         env:
@@ -217,7 +225,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           DATE=$(date -u "+%a, %d %b %Y %H:%M:%S +0000")
-          DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/hqfin-macos.zip"
+          DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${VERSION}/hqfin-macos.dmg"
           {
             echo '<?xml version="1.0" encoding="utf-8"?>'
             echo '<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">'

@@ -26,6 +26,7 @@ import 'package:launch_at_startup/launch_at_startup.dart';
 import 'package:flutter_window_close/flutter_window_close.dart';
 import 'package:windows_taskbar/windows_taskbar.dart';
 import 'package:flutter_blurhash/flutter_blurhash.dart';
+import 'package:touch_bar/touch_bar.dart';
 
 part 'src/app.dart';
 part 'src/models.dart';

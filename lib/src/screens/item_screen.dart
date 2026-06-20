@@ -81,6 +81,8 @@ class _ItemScreenState extends State<ItemScreen> {
             ? _selectedSubtitleStreamIndex
             : null,
         nextEpisode: nextEpisode,
+        episodeList: _episodeList.isNotEmpty ? _episodeList : null,
+        currentEpisodeIndex: idx >= 0 ? idx : null,
       ),
       name: '/player/${playableItem.id}',
     );

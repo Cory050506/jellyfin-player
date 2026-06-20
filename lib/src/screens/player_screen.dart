@@ -8,6 +8,8 @@ class PlayerScreen extends StatefulWidget {
     this.audioStreamIndex,
     this.subtitleStreamIndex,
     this.nextEpisode,
+    this.episodeList,
+    this.currentEpisodeIndex,
   });
 
   final JellyfinClient client;
@@ -15,6 +17,8 @@ class PlayerScreen extends StatefulWidget {
   final int? audioStreamIndex;
   final int? subtitleStreamIndex;
   final JellyfinItem? nextEpisode;
+  final List<JellyfinItem>? episodeList;
+  final int? currentEpisodeIndex;
 
   @override
   State<PlayerScreen> createState() => _PlayerScreenState();
@@ -40,6 +44,10 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
   // Auto-play countdown (seconds remaining until next episode starts)
   int? _upNextCountdown;
   Timer? _upNextTimer;
+
+  // Touch Bar (macOS only)
+  TouchBarButton? _tbPlayPause;
+  StreamSubscription<bool>? _tbPlayingSub;
 
   bool get _useNativePlayer =>
       !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
@@ -240,6 +248,7 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
         const Duration(seconds: 10),
         (_) => unawaited(_reportProgress()),
       );
+      if (_isMacOS) _initTouchBar(player);
     } catch (error) {
       if (mounted) {
         setState(() => _error = friendlyError(error));
@@ -516,6 +525,10 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
     if (defaultTargetPlatform == TargetPlatform.windows) {
       unawaited(WindowsTaskbar.resetThumbnailToolbar());
     }
+    _tbPlayingSub?.cancel();
+    if (_isMacOS) {
+      unawaited(setTouchBar(TouchBar(children: [])));
+    }
     super.dispose();
   }
 
@@ -730,6 +743,9 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
                               ? _toggleFullscreen
                               : null,
                           onPiP: _useNativePlayer ? _enterPictureInPicture : null,
+                          onEpisodes: widget.episodeList != null && widget.episodeList!.isNotEmpty
+                              ? _showEpisodePicker
+                              : null,
                         ),
                       ),
                     ),
@@ -765,6 +781,106 @@ class _PlayerScreenState extends State<PlayerScreen> with WidgetsBindingObserver
                     ),
                   ),
               ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _initTouchBar(Player player) {
+    final skipSecs = _settings?.skipDurationSeconds ?? 30;
+    final tbBack = TouchBarButton(
+      label: '↩ $skipSecs',
+      onClick: () {
+        final pos = player.state.position;
+        unawaited(player.seek(pos - Duration(seconds: skipSecs)));
+      },
+    );
+    _tbPlayPause = TouchBarButton(
+      label: '⏸',
+      onClick: () => unawaited(player.playOrPause()),
+    );
+    final tbFwd = TouchBarButton(
+      label: '$skipSecs ↪',
+      onClick: () {
+        final pos = player.state.position;
+        unawaited(player.seek(pos + Duration(seconds: skipSecs)));
+      },
+    );
+    unawaited(setTouchBar(TouchBar(children: [tbBack, _tbPlayPause!, tbFwd])));
+    _tbPlayingSub = player.stream.playing.listen((playing) {
+      _tbPlayPause?.label = playing ? '⏸' : '▶';
+    });
+  }
+
+  Future<void> _showEpisodePicker() async {
+    final list = widget.episodeList;
+    if (list == null || list.isEmpty) return;
+    final current = widget.currentEpisodeIndex;
+    await showAdaptiveSheet<void>(
+      context: context,
+      backgroundColor: AppColors.panel,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Episodes',
+                style: Theme.of(ctx).textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 8),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: list.length,
+                  itemBuilder: (ctx, index) {
+                    final ep = list[index];
+                    final isPlaying = index == current;
+                    return ListTile(
+                      leading: Icon(
+                        isPlaying
+                            ? Icons.play_circle_fill_rounded
+                            : Icons.play_circle_outline_rounded,
+                        color: isPlaying ? AppColors.accent : Colors.white54,
+                      ),
+                      title: Text(ep.displayTitle),
+                      subtitle: ep.subtitle.isNotEmpty ? Text(ep.subtitle) : null,
+                      selected: isPlaying,
+                      onTap: () async {
+                        Navigator.of(ctx).pop();
+                        if (isPlaying) return;
+                        final nav = Navigator.of(context);
+                        final detail = ep.mediaStreams.isEmpty
+                            ? await widget.client.getItemDetails(ep.id)
+                            : ep;
+                        if (!mounted) return;
+                        final nextIdx = index + 1 < list.length ? index + 1 : null;
+                        final nextEp = nextIdx != null ? list[nextIdx] : null;
+                        unawaited(_reportStopped());
+                        nav.pushReplacement(
+                          adaptivePageRoute<void>(
+                            builder: (_) => PlayerScreen(
+                              client: widget.client,
+                              item: detail,
+                              nextEpisode: nextEp,
+                              episodeList: list,
+                              currentEpisodeIndex: index,
+                            ),
+                            name: '/player/${detail.id}',
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
             ],
           ),
         ),
@@ -953,6 +1069,7 @@ class PlayerTopChrome extends StatelessWidget {
     required this.isFullscreen,
     required this.onFullscreen,
     this.onPiP,
+    this.onEpisodes,
   });
 
   final JellyfinItem item;
@@ -962,6 +1079,7 @@ class PlayerTopChrome extends StatelessWidget {
   final bool isFullscreen;
   final Future<void> Function()? onFullscreen;
   final Future<void> Function()? onPiP;
+  final VoidCallback? onEpisodes;
 
   @override
   Widget build(BuildContext context) {
@@ -1015,6 +1133,14 @@ class PlayerTopChrome extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onEpisodes != null) ...[
+                IconButton.filledTonal(
+                  tooltip: 'Episodes',
+                  onPressed: onEpisodes,
+                  icon: const Icon(Icons.playlist_play_rounded),
+                ),
+                const SizedBox(width: 8),
+              ],
               IconButton.filledTonal(
                 tooltip: 'Audio tracks',
                 onPressed: onAudio,
