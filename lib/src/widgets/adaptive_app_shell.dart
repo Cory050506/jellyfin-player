@@ -224,8 +224,8 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
               itemsFuture: _client.getItems(lib),
               onRefresh: () {},
             ),
-          // Search tab
-          SearchScreen(client: _client),
+          // Search tab — App Store style (large title + inline search field)
+          SearchScreen(client: _client, isTab: true),
           // Settings tab
           cupertino.CupertinoPageScaffold(
             navigationBar: const cupertino.CupertinoNavigationBar(
@@ -1007,8 +1007,6 @@ class _AndroidShellState extends State<_AndroidShell> {
               itemsFuture: _client.getItems(lib),
               onRefresh: () {},
             ),
-          // Search page
-          SearchScreen(client: _client),
           // Settings page
           Scaffold(
             appBar: AppBar(title: const Text('Settings')),
@@ -1049,6 +1047,19 @@ class _AndroidShellState extends State<_AndroidShell> {
 
         return Scaffold(
           extendBody: true,
+          appBar: AppBar(
+            title: const Text('HQFin'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.search_rounded),
+                tooltip: 'Search',
+                onPressed: () => Navigator.of(context).pushAdaptive<void>(
+                  builder: (_) => SearchScreen(client: _client),
+                  name: '/search',
+                ),
+              ),
+            ],
+          ),
           body: IndexedStack(index: _selectedIndex, children: pages),
           bottomNavigationBar: NavigationBar(
             selectedIndex: _selectedIndex,
@@ -1061,10 +1072,6 @@ class _AndroidShellState extends State<_AndroidShell> {
                   icon: Icon(iconForLibrary(lib.collectionType)),
                   label: lib.name,
                 ),
-              const NavigationDestination(
-                icon: Icon(Icons.search_rounded),
-                label: 'Search',
-              ),
               const NavigationDestination(
                 icon: Icon(Icons.settings_rounded),
                 label: 'Settings',
