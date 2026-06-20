@@ -1077,16 +1077,36 @@ class _AndroidShellState extends State<_AndroidShell> {
         );
 
         if (_isTV) {
-          // ── Android TV layout: persistent left rail ───────────────────
+          // ── Android TV layout: overlay rail (Stack so content width is
+          // fixed — animating rail width in a Row resizes the grid which
+          // causes cards to visually jump during the transition).
+          const double railCollapsed = 72;
+          const double railExpanded = 256;
           return MediaQuery(
             data: mediaQuery,
             child: Scaffold(
-              body: Row(
+              body: Stack(
                 children: [
-                  AnimatedSize(
+                  // Content fills the full screen width, offset by the
+                  // collapsed rail width so it's never hidden behind the rail.
+                  Positioned(
+                    left: railCollapsed,
+                    top: 0, right: 0, bottom: 0,
+                    child: Focus(
+                      canRequestFocus: false,
+                      skipTraversal: true,
+                      onFocusChange: (hasFocus) {
+                        if (mounted) setState(() => _railExtended = !hasFocus);
+                      },
+                      child: IndexedStack(index: selectedIndex, children: pages),
+                    ),
+                  ),
+                  // Rail overlays the left edge; expands over the content.
+                  AnimatedPositioned(
                     duration: const Duration(milliseconds: 220),
                     curve: Curves.easeInOut,
-                    alignment: Alignment.centerLeft,
+                    left: 0, top: 0, bottom: 0,
+                    width: _railExtended ? railExpanded : railCollapsed,
                     child: NavigationRail(
                       extended: _railExtended,
                       selectedIndex: selectedIndex,
@@ -1122,8 +1142,7 @@ class _AndroidShellState extends State<_AndroidShell> {
                               TextButton.icon(
                                 onPressed: () =>
                                     Navigator.of(context).pushAdaptive<void>(
-                                  builder: (_) =>
-                                      SearchScreen(client: _client),
+                                  builder: (_) => SearchScreen(client: _client),
                                   name: '/search',
                                 ),
                                 icon: const Icon(Icons.search_rounded),
@@ -1142,8 +1161,7 @@ class _AndroidShellState extends State<_AndroidShell> {
                                 color: Colors.white70,
                                 onPressed: () =>
                                     Navigator.of(context).pushAdaptive<void>(
-                                  builder: (_) =>
-                                      SearchScreen(client: _client),
+                                  builder: (_) => SearchScreen(client: _client),
                                   name: '/search',
                                 ),
                               ),
@@ -1183,17 +1201,6 @@ class _AndroidShellState extends State<_AndroidShell> {
                           label: Text('Settings'),
                         ),
                       ],
-                    ),
-                  ),
-                  const VerticalDivider(width: 1, thickness: 1),
-                  Expanded(
-                    child: Focus(
-                      canRequestFocus: false,
-                      skipTraversal: true,
-                      onFocusChange: (hasFocus) {
-                        if (mounted) setState(() => _railExtended = !hasFocus);
-                      },
-                      child: IndexedStack(index: selectedIndex, children: pages),
                     ),
                   ),
                 ],
