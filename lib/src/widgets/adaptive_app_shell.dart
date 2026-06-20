@@ -212,6 +212,7 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
               label: lib.name,
               symbol: sfSymbolForLibrary(lib.collectionType),
             ),
+          const NativeGlassNavBarItem(label: 'Search', symbol: 'magnifyingglass'),
           const NativeGlassNavBarItem(label: 'Settings', symbol: 'gear'),
         ];
 
@@ -223,18 +224,12 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
               itemsFuture: _client.getItems(lib),
               onRefresh: () {},
             ),
+          // Search tab
+          SearchScreen(client: _client),
           // Settings tab
           cupertino.CupertinoPageScaffold(
-            navigationBar: cupertino.CupertinoNavigationBar(
-              middle: const Text('Settings'),
-              trailing: cupertino.CupertinoButton(
-                padding: EdgeInsets.zero,
-                onPressed: () => Navigator.of(context).pushAdaptive<void>(
-                  builder: (_) => SearchScreen(client: _client),
-                  name: '/search',
-                ),
-                child: const Icon(cupertino.CupertinoIcons.search),
-              ),
+            navigationBar: const cupertino.CupertinoNavigationBar(
+              middle: Text('Settings'),
             ),
             child: SafeArea(
               child: ListView(
@@ -359,6 +354,10 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
                     icon: Icon(iconForLibrary(lib.collectionType)),
                     label: lib.name,
                   ),
+                const cupertino.BottomNavigationBarItem(
+                  icon: Icon(cupertino.CupertinoIcons.search),
+                  label: 'Search',
+                ),
                 const cupertino.BottomNavigationBarItem(
                   icon: Icon(cupertino.CupertinoIcons.gear),
                   label: 'Settings',
@@ -1008,21 +1007,11 @@ class _AndroidShellState extends State<_AndroidShell> {
               itemsFuture: _client.getItems(lib),
               onRefresh: () {},
             ),
+          // Search page
+          SearchScreen(client: _client),
           // Settings page
           Scaffold(
-            appBar: AppBar(
-              title: const Text('Settings'),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.search_rounded),
-                  tooltip: 'Search',
-                  onPressed: () => Navigator.of(context).pushAdaptive<void>(
-                    builder: (_) => SearchScreen(client: _client),
-                    name: '/search',
-                  ),
-                ),
-              ],
-            ),
+            appBar: AppBar(title: const Text('Settings')),
             body: ListView(
               children: [
                 ListTile(
@@ -1072,6 +1061,10 @@ class _AndroidShellState extends State<_AndroidShell> {
                   icon: Icon(iconForLibrary(lib.collectionType)),
                   label: lib.name,
                 ),
+              const NavigationDestination(
+                icon: Icon(Icons.search_rounded),
+                label: 'Search',
+              ),
               const NavigationDestination(
                 icon: Icon(Icons.settings_rounded),
                 label: 'Settings',
