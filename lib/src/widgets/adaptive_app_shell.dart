@@ -66,6 +66,7 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
   List<JellyfinLibrary> _allLibraries = const [];
   AppSettings _settings = AppSettings.defaults;
   int _selectedIndex = 0;
+  final Map<String, Future<List<JellyfinItem>>> _itemFutures = {};
 
   @override
   void initState() {
@@ -228,10 +229,11 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
         final pages = [
           for (final lib in tabLibs)
             ItemsView(
+              key: ValueKey(lib.id),
               client: _client,
               library: lib,
-              itemsFuture: _client.getItems(lib),
-              onRefresh: () {},
+              itemsFuture: _itemFutures[lib.id] ??= _client.getItems(lib),
+              onRefresh: () => setState(() => _itemFutures.remove(lib.id)),
             ),
           // Search tab — App Store style (large title + inline search field)
           SearchScreen(client: _client, isTab: true),
@@ -887,6 +889,7 @@ class _AndroidShellState extends State<_AndroidShell> {
   int _selectedIndex = 0;
   bool _isTV = false;
   bool _railExtended = true;
+  final Map<String, Future<List<JellyfinItem>>> _itemFutures = {};
 
   @override
   void initState() {
@@ -1025,10 +1028,11 @@ class _AndroidShellState extends State<_AndroidShell> {
         final pages = [
           for (final lib in tabLibs)
             ItemsView(
+              key: ValueKey(lib.id),
               client: _client,
               library: lib,
-              itemsFuture: _client.getItems(lib),
-              onRefresh: () {},
+              itemsFuture: _itemFutures[lib.id] ??= _client.getItems(lib),
+              onRefresh: () => setState(() => _itemFutures.remove(lib.id)),
             ),
           // Settings page
           Scaffold(
