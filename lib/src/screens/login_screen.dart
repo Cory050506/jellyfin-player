@@ -13,14 +13,54 @@ class _LoginScreenState extends State<LoginScreen> {
   final _serverController = TextEditingController(text: 'http://');
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _serverFocus = FocusNode();
+  final _usernameFocus = FocusNode();
+  final _passwordFocus = FocusNode();
   bool _busy = false;
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_handleKey);
+  }
+
+  // Intercept D-pad vertical navigation before the native EditText sees it.
+  // Single-line TextFields have no use for up/down arrows so we steal them
+  // to move focus between fields.
+  bool _handleKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      if (_serverFocus.hasPrimaryFocus) {
+        _usernameFocus.requestFocus();
+        return true;
+      }
+      if (_usernameFocus.hasPrimaryFocus) {
+        _passwordFocus.requestFocus();
+        return true;
+      }
+    } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      if (_passwordFocus.hasPrimaryFocus) {
+        _usernameFocus.requestFocus();
+        return true;
+      }
+      if (_usernameFocus.hasPrimaryFocus) {
+        _serverFocus.requestFocus();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleKey);
     _serverController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
+    _serverFocus.dispose();
+    _usernameFocus.dispose();
+    _passwordFocus.dispose();
     super.dispose();
   }
 
@@ -55,6 +95,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       serverController: _serverController,
                       usernameController: _usernameController,
                       passwordController: _passwordController,
+                      serverFocus: _serverFocus,
+                      usernameFocus: _usernameFocus,
+                      passwordFocus: _passwordFocus,
                       onSignIn: _signIn,
                     );
                     if (compact) {
@@ -170,13 +213,16 @@ class _BrandPanel extends StatelessWidget {
   }
 }
 
-class _LoginPanel extends StatefulWidget {
+class _LoginPanel extends StatelessWidget {
   const _LoginPanel({
     required this.busy,
     required this.error,
     required this.serverController,
     required this.usernameController,
     required this.passwordController,
+    required this.serverFocus,
+    required this.usernameFocus,
+    required this.passwordFocus,
     required this.onSignIn,
   });
 
@@ -185,24 +231,10 @@ class _LoginPanel extends StatefulWidget {
   final TextEditingController serverController;
   final TextEditingController usernameController;
   final TextEditingController passwordController;
+  final FocusNode serverFocus;
+  final FocusNode usernameFocus;
+  final FocusNode passwordFocus;
   final VoidCallback onSignIn;
-
-  @override
-  State<_LoginPanel> createState() => _LoginPanelState();
-}
-
-class _LoginPanelState extends State<_LoginPanel> {
-  final _serverFocus = FocusNode();
-  final _usernameFocus = FocusNode();
-  final _passwordFocus = FocusNode();
-
-  @override
-  void dispose() {
-    _serverFocus.dispose();
-    _usernameFocus.dispose();
-    _passwordFocus.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -214,35 +246,7 @@ class _LoginPanelState extends State<_LoginPanel> {
       ),
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Focus(
-          // Catch D-pad up/down that bubble up from TextFields (single-line
-          // TextFields don't use vertical arrow keys, so they bubble here).
-          canRequestFocus: false,
-          skipTraversal: true,
-          onKeyEvent: (node, event) {
-            if (event is! KeyDownEvent) return KeyEventResult.ignored;
-            if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-              if (_serverFocus.hasPrimaryFocus) {
-                _usernameFocus.requestFocus();
-                return KeyEventResult.handled;
-              }
-              if (_usernameFocus.hasPrimaryFocus) {
-                _passwordFocus.requestFocus();
-                return KeyEventResult.handled;
-              }
-            } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-              if (_passwordFocus.hasPrimaryFocus) {
-                _usernameFocus.requestFocus();
-                return KeyEventResult.handled;
-              }
-              if (_usernameFocus.hasPrimaryFocus) {
-                _serverFocus.requestFocus();
-                return KeyEventResult.handled;
-              }
-            }
-            return KeyEventResult.ignored;
-          },
-          child: Column(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -259,48 +263,47 @@ class _LoginPanelState extends State<_LoginPanel> {
             ),
             const SizedBox(height: 24),
             AdaptiveTextField(
-              controller: widget.serverController,
-              focusNode: _serverFocus,
+              controller: serverController,
+              focusNode: serverFocus,
               placeholder: 'Server URL',
               icon: Icons.dns_rounded,
               keyboardType: TextInputType.url,
               textInputAction: TextInputAction.next,
-              onSubmitted: (_) => _usernameFocus.requestFocus(),
+              onSubmitted: (_) => usernameFocus.requestFocus(),
             ),
             const SizedBox(height: 12),
             AdaptiveTextField(
-              controller: widget.usernameController,
-              focusNode: _usernameFocus,
+              controller: usernameController,
+              focusNode: usernameFocus,
               placeholder: 'Username',
               icon: Icons.person_rounded,
               textInputAction: TextInputAction.next,
-              onSubmitted: (_) => _passwordFocus.requestFocus(),
+              onSubmitted: (_) => passwordFocus.requestFocus(),
             ),
             const SizedBox(height: 12),
             AdaptiveTextField(
-              controller: widget.passwordController,
-              focusNode: _passwordFocus,
+              controller: passwordController,
+              focusNode: passwordFocus,
               placeholder: 'Password',
               icon: Icons.lock_rounded,
               obscureText: true,
               textInputAction: TextInputAction.done,
-              onSubmitted: (_) => widget.onSignIn(),
+              onSubmitted: (_) => onSignIn(),
             ),
-            if (widget.error != null) ...[
+            if (error != null) ...[
               const SizedBox(height: 14),
               Text(
-                widget.error!,
+                error!,
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ],
             const SizedBox(height: 20),
             AdaptiveButton(
-              label: widget.busy ? 'Connecting…' : 'Connect',
+              label: busy ? 'Connecting…' : 'Connect',
               icon: Icons.login_rounded,
-              onPressed: widget.busy ? null : widget.onSignIn,
+              onPressed: busy ? null : onSignIn,
             ),
           ],
-        ),
         ),
       ),
     );
