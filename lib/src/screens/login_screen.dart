@@ -165,7 +165,7 @@ class _BrandPanel extends StatelessWidget {
   }
 }
 
-class _LoginPanel extends StatelessWidget {
+class _LoginPanel extends StatefulWidget {
   const _LoginPanel({
     required this.busy,
     required this.error,
@@ -183,6 +183,23 @@ class _LoginPanel extends StatelessWidget {
   final VoidCallback onSignIn;
 
   @override
+  State<_LoginPanel> createState() => _LoginPanelState();
+}
+
+class _LoginPanelState extends State<_LoginPanel> {
+  final _serverFocus = FocusNode();
+  final _usernameFocus = FocusNode();
+  final _passwordFocus = FocusNode();
+
+  @override
+  void dispose() {
+    _serverFocus.dispose();
+    _usernameFocus.dispose();
+    _passwordFocus.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -192,62 +209,65 @@ class _LoginPanel extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: FocusTraversalGroup(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Connect',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Use your Jellyfin server URL and account.',
+              style: TextStyle(color: Colors.white60),
+            ),
+            const SizedBox(height: 24),
+            AdaptiveTextField(
+              controller: widget.serverController,
+              focusNode: _serverFocus,
+              autofocus: true,
+              placeholder: 'Server URL',
+              icon: Icons.dns_rounded,
+              keyboardType: TextInputType.url,
+              textInputAction: TextInputAction.next,
+              onSubmitted: (_) => _usernameFocus.requestFocus(),
+            ),
+            const SizedBox(height: 12),
+            AdaptiveTextField(
+              controller: widget.usernameController,
+              focusNode: _usernameFocus,
+              placeholder: 'Username',
+              icon: Icons.person_rounded,
+              textInputAction: TextInputAction.next,
+              onSubmitted: (_) => _passwordFocus.requestFocus(),
+            ),
+            const SizedBox(height: 12),
+            AdaptiveTextField(
+              controller: widget.passwordController,
+              focusNode: _passwordFocus,
+              placeholder: 'Password',
+              icon: Icons.lock_rounded,
+              obscureText: true,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => widget.onSignIn(),
+            ),
+            if (widget.error != null) ...[
+              const SizedBox(height: 14),
               Text(
-                'Connect',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Use your Jellyfin server URL and account.',
-                style: TextStyle(color: Colors.white60),
-              ),
-              const SizedBox(height: 24),
-              AdaptiveTextField(
-                controller: serverController,
-                placeholder: 'Server URL',
-                icon: Icons.dns_rounded,
-                keyboardType: TextInputType.url,
-                textInputAction: TextInputAction.next,
-                onSubmitted: (_) => FocusScope.of(context).nextFocus(),
-              ),
-              const SizedBox(height: 12),
-              AdaptiveTextField(
-                controller: usernameController,
-                placeholder: 'Username',
-                icon: Icons.person_rounded,
-                textInputAction: TextInputAction.next,
-                onSubmitted: (_) => FocusScope.of(context).nextFocus(),
-              ),
-              const SizedBox(height: 12),
-              AdaptiveTextField(
-                controller: passwordController,
-                placeholder: 'Password',
-                icon: Icons.lock_rounded,
-                obscureText: true,
-                onSubmitted: (_) => onSignIn(),
-              ),
-              if (error != null) ...[
-                const SizedBox(height: 14),
-                Text(
-                  error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              ],
-              const SizedBox(height: 20),
-              AdaptiveButton(
-                label: busy ? 'Connecting…' : 'Connect',
-                icon: Icons.login_rounded,
-                onPressed: busy ? null : onSignIn,
+                widget.error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ],
-          ),
+            const SizedBox(height: 20),
+            AdaptiveButton(
+              label: widget.busy ? 'Connecting…' : 'Connect',
+              icon: Icons.login_rounded,
+              onPressed: widget.busy ? null : widget.onSignIn,
+            ),
+          ],
         ),
       ),
     );

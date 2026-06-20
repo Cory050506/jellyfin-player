@@ -290,9 +290,11 @@ class AdaptiveTextField extends StatelessWidget {
   const AdaptiveTextField({
     super.key,
     required this.controller,
+    this.focusNode,
     this.placeholder,
     this.icon,
     this.obscureText = false,
+    this.autofocus = false,
     this.keyboardType,
     this.textInputAction,
     this.textAlign = TextAlign.start,
@@ -301,9 +303,11 @@ class AdaptiveTextField extends StatelessWidget {
   });
 
   final TextEditingController controller;
+  final FocusNode? focusNode;
   final String? placeholder;
   final IconData? icon;
   final bool obscureText;
+  final bool autofocus;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
   final TextAlign textAlign;
@@ -315,8 +319,10 @@ class AdaptiveTextField extends StatelessWidget {
     if (_isIOS) {
       return cupertino.CupertinoTextField(
         controller: controller,
+        focusNode: focusNode,
         placeholder: placeholder,
         obscureText: obscureText,
+        autofocus: autofocus,
         keyboardType: keyboardType,
         textInputAction: textInputAction,
         textAlign: textAlign,
@@ -335,8 +341,10 @@ class AdaptiveTextField extends StatelessWidget {
       return _fluentScope(
         fluent.TextBox(
           controller: controller,
+          focusNode: focusNode,
           placeholder: placeholder,
           obscureText: obscureText,
+          autofocus: autofocus,
           keyboardType: keyboardType,
           textInputAction: textInputAction,
           textAlign: textAlign,
@@ -355,8 +363,10 @@ class AdaptiveTextField extends StatelessWidget {
       return _macosScope(
         macos.MacosTextField(
           controller: controller,
+          focusNode: focusNode,
           placeholder: placeholder,
           obscureText: obscureText,
+          autofocus: autofocus,
           keyboardType: keyboardType,
           textInputAction: textInputAction,
           textAlign: textAlign,
@@ -373,7 +383,9 @@ class AdaptiveTextField extends StatelessWidget {
     }
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       obscureText: obscureText,
+      autofocus: autofocus,
       keyboardType: keyboardType,
       textInputAction: textInputAction,
       textAlign: textAlign,
