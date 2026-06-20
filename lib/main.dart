@@ -48,6 +48,7 @@ part 'src/screens/items_view.dart';
 part 'src/screens/item_screen.dart';
 part 'src/screens/player_screen.dart';
 part 'src/screens/settings_screen.dart';
+part 'src/screens/search_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

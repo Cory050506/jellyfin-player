@@ -318,6 +318,25 @@ class JellyfinClient {
     return resolved;
   }
 
+  Future<List<JellyfinItem>> search(String query) async {
+    final userId = session!.userId;
+    final response = await http.get(
+      _uri('/Users/$userId/Items', {
+        'SearchTerm': query,
+        'Recursive': 'true',
+        'IncludeItemTypes': 'Movie,Series,Episode',
+        'Fields': listFields,
+        'Limit': '60',
+        'SortBy': 'SortName',
+      }),
+      headers: _headers,
+    );
+    final body = decodeResponse(response);
+    return (body['Items'] as List<dynamic>? ?? [])
+        .map((item) => JellyfinItem.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
   Future<void> markPlayed(String itemId) async {
     final userId = session!.userId;
     final response = await http.post(

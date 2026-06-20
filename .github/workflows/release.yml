@@ -25,13 +25,16 @@ jobs:
 
       - run: flutter pub get
 
+      # NOTE: To pass Gatekeeper you need a Developer ID Application cert from
+      # Apple Developer Program ($99/yr). Without it, the app uses ad-hoc signing
+      # and macOS will warn users once (they can allow via Privacy & Security).
       - name: Import signing certificate
         env:
           CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
           CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
         run: |
           if [ -z "$CERT_P12_BASE64" ]; then
-            echo "No cert secret — skipping import, will use ad-hoc signing"
+            echo "No Developer ID cert — will use ad-hoc signing"
             exit 0
           fi
           echo "$CERT_P12_BASE64" | base64 --decode > /tmp/cert.p12

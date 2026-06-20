@@ -225,8 +225,16 @@ class _NativeIOSShellState extends State<_NativeIOSShell> {
             ),
           // Settings tab
           cupertino.CupertinoPageScaffold(
-            navigationBar: const cupertino.CupertinoNavigationBar(
-              middle: Text('Settings'),
+            navigationBar: cupertino.CupertinoNavigationBar(
+              middle: const Text('Settings'),
+              trailing: cupertino.CupertinoButton(
+                padding: EdgeInsets.zero,
+                onPressed: () => Navigator.of(context).pushAdaptive<void>(
+                  builder: (_) => SearchScreen(client: _client),
+                  name: '/search',
+                ),
+                child: const Icon(cupertino.CupertinoIcons.search),
+              ),
             ),
             child: SafeArea(
               child: ListView(
@@ -552,6 +560,16 @@ class _NativeMacOSShellState extends State<_NativeMacOSShell> {
                       child: Column(
                         children: [
                           _MacOSSidebarButton(
+                            icon: Icons.search_rounded,
+                            label: 'Search',
+                            onPressed: () {
+                              Navigator.of(context).pushAdaptive<void>(
+                                builder: (_) => SearchScreen(client: _client),
+                                name: '/search',
+                              );
+                            },
+                          ),
+                          _MacOSSidebarButton(
                             icon: Icons.tune_rounded,
                             label: 'Edit',
                             onPressed: _editLibraries,
@@ -783,6 +801,16 @@ class _WindowsShellState extends State<_WindowsShell> {
                     child: Column(
                       children: [
                         _SidebarButton(
+                          icon: Icons.search_rounded,
+                          label: 'Search',
+                          onPressed: () {
+                            Navigator.of(context).pushAdaptive<void>(
+                              builder: (_) => SearchScreen(client: _client),
+                              name: '/search',
+                            );
+                          },
+                        ),
+                        _SidebarButton(
                           icon: Icons.tune_rounded,
                           label: 'Edit',
                           onPressed: _editLibraries,
@@ -982,7 +1010,19 @@ class _AndroidShellState extends State<_AndroidShell> {
             ),
           // Settings page
           Scaffold(
-            appBar: AppBar(title: const Text('Settings')),
+            appBar: AppBar(
+              title: const Text('Settings'),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.search_rounded),
+                  tooltip: 'Search',
+                  onPressed: () => Navigator.of(context).pushAdaptive<void>(
+                    builder: (_) => SearchScreen(client: _client),
+                    name: '/search',
+                  ),
+                ),
+              ],
+            ),
             body: ListView(
               children: [
                 ListTile(

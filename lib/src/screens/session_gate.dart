@@ -19,14 +19,12 @@ class _SessionGateState extends State<SessionGate> {
   Future<void> _initializeNativeFeatures() async {
     // Initialize native features (hotkeys, tray, protocol handler, etc.)
     await NativeFeatures().initialize(
-      onTrayExit: () {
-        // Handle tray exit
-        if (mounted) {
-          Navigator.of(context).pop();
-        }
+      onTrayExit: () async {
+        await windowManager.close();
       },
-      onTrayShow: () {
-        // Handle tray show
+      onTrayShow: () async {
+        await windowManager.show();
+        await windowManager.focus();
       },
     );
   }
