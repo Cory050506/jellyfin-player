@@ -1083,86 +1083,108 @@ class _AndroidShellState extends State<_AndroidShell> {
             child: Scaffold(
               body: Row(
                 children: [
-                  AnimatedContainer(
+                  AnimatedSize(
                     duration: const Duration(milliseconds: 220),
                     curve: Curves.easeInOut,
-                    width: _railExtended ? 256 : 72,
-                    clipBehavior: Clip.antiAlias,
-                    decoration: const BoxDecoration(),
+                    alignment: Alignment.centerLeft,
                     child: NavigationRail(
-                    extended: _railExtended,
-                    selectedIndex: selectedIndex,
-                    onDestinationSelected: (i) =>
-                        setState(() => _selectedIndex = i),
-                    backgroundColor: AppColors.panelRaised,
-                    leading: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.asset(
-                              'assets/icon.png',
-                              width: 40,
-                              height: 40,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'HQFin',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w800),
-                          ),
-                          const SizedBox(height: 16),
-                          TextButton.icon(
-                            onPressed: () =>
-                                Navigator.of(context).pushAdaptive<void>(
-                              builder: (_) => SearchScreen(client: _client),
-                              name: '/search',
-                            ),
-                            icon: const Icon(Icons.search_rounded),
-                            label: const Text('Search'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: Colors.white70,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10,
+                      extended: _railExtended,
+                      selectedIndex: selectedIndex,
+                      onDestinationSelected: (i) =>
+                          setState(() => _selectedIndex = i),
+                      backgroundColor: AppColors.panelRaised,
+                      leading: Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          _railExtended ? 16 : 0, 20,
+                          _railExtended ? 16 : 0, 8,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.asset(
+                                'assets/icon.png',
+                                width: 40,
+                                height: 40,
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                        ],
-                      ),
-                    ),
-                    trailing: Padding(
-                      padding: const EdgeInsets.only(bottom: 24),
-                      child: TextButton.icon(
-                        onPressed: widget.onSignedOut,
-                        icon: const Icon(Icons.logout_rounded),
-                        label: const Text('Sign Out'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.redAccent,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10,
-                          ),
+                            if (_railExtended) ...[
+                              const SizedBox(height: 10),
+                              Text(
+                                'HQFin',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.w800),
+                              ),
+                              const SizedBox(height: 16),
+                              TextButton.icon(
+                                onPressed: () =>
+                                    Navigator.of(context).pushAdaptive<void>(
+                                  builder: (_) =>
+                                      SearchScreen(client: _client),
+                                  name: '/search',
+                                ),
+                                icon: const Icon(Icons.search_rounded),
+                                label: const Text('Search'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.white70,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10,
+                                  ),
+                                ),
+                              ),
+                            ] else ...[
+                              const SizedBox(height: 8),
+                              IconButton(
+                                icon: const Icon(Icons.search_rounded),
+                                color: Colors.white70,
+                                onPressed: () =>
+                                    Navigator.of(context).pushAdaptive<void>(
+                                  builder: (_) =>
+                                      SearchScreen(client: _client),
+                                  name: '/search',
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 4),
+                          ],
                         ),
                       ),
-                    ),
-                    destinations: [
-                      for (final lib in tabLibs)
-                        NavigationRailDestination(
-                          icon: Icon(iconForLibrary(lib.collectionType)),
-                          label: Text(lib.name),
-                        ),
-                      const NavigationRailDestination(
-                        icon: Icon(Icons.settings_rounded),
-                        label: Text('Settings'),
+                      trailing: Padding(
+                        padding: const EdgeInsets.only(bottom: 24),
+                        child: _railExtended
+                            ? TextButton.icon(
+                                onPressed: widget.onSignedOut,
+                                icon: const Icon(Icons.logout_rounded),
+                                label: const Text('Sign Out'),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.redAccent,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10,
+                                  ),
+                                ),
+                              )
+                            : IconButton(
+                                icon: const Icon(Icons.logout_rounded),
+                                color: Colors.redAccent,
+                                onPressed: widget.onSignedOut,
+                              ),
                       ),
-                    ],
+                      destinations: [
+                        for (final lib in tabLibs)
+                          NavigationRailDestination(
+                            icon: Icon(iconForLibrary(lib.collectionType)),
+                            label: Text(lib.name),
+                          ),
+                        const NavigationRailDestination(
+                          icon: Icon(Icons.settings_rounded),
+                          label: Text('Settings'),
+                        ),
+                      ],
+                    ),
                   ),
-                  ), // AnimatedContainer
                   const VerticalDivider(width: 1, thickness: 1),
                   Expanded(
                     child: Focus(
