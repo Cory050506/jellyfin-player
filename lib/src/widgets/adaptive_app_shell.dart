@@ -1083,11 +1083,7 @@ class _AndroidShellState extends State<_AndroidShell> {
             child: Scaffold(
               body: Row(
                 children: [
-                  AnimatedSize(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeInOut,
-                    alignment: Alignment.centerLeft,
-                    child: NavigationRail(
+                  NavigationRail(
                       extended: _railExtended,
                       selectedIndex: selectedIndex,
                       onDestinationSelected: (i) =>
@@ -1184,7 +1180,6 @@ class _AndroidShellState extends State<_AndroidShell> {
                         ),
                       ],
                     ),
-                  ),
                   const VerticalDivider(width: 1, thickness: 1),
                   Expanded(
                     child: Focus(
